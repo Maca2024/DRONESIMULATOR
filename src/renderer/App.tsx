@@ -11,6 +11,7 @@ import { GameScene } from './scenes/GameScene';
 import { LoadingScreen } from './ui/LoadingScreen';
 import { TutorialOverlay } from './ui/TutorialOverlay';
 import { MissionHUD } from './ui/MissionHUD';
+import { ControlsHint } from './ui/ControlsHint';
 import { TutorialSystem } from './systems/TutorialSystem';
 import { MissionSystem } from './systems/MissionSystem';
 
@@ -130,6 +131,9 @@ function App(): JSX.Element {
               dronePosition={dronePosition}
             />
           )}
+
+          {/* Controls Hint */}
+          {isPlayingScreen && <ControlsHint />}
         </Suspense>
       </div>
     </>

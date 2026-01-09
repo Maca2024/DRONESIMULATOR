@@ -136,6 +136,103 @@
   font-size: 0.8rem;
 }
 
+/* Submenus */
+.submenu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+  width: 100%;
+  max-width: 600px;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+.submenuTitle {
+  font-size: 1.5rem;
+  color: var(--color-accent-primary);
+  margin: 0;
+  letter-spacing: 0.1em;
+}
+
+.levelGrid,
+.missionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.levelButton,
+.missionButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  text-align: left;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.levelButton:hover,
+.missionButton:hover {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: var(--color-accent-primary);
+  transform: translateY(-2px);
+}
+
+.levelName,
+.missionName {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.levelDesc,
+.missionDesc {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.missionType {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: rgba(0, 204, 255, 0.2);
+  color: var(--color-accent-secondary);
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.missionPar {
+  font-size: 0.8rem;
+  color: var(--color-warning);
+  font-weight: 500;
+}
+
+.backButton {
+  padding: var(--spacing-sm) var(--spacing-xl);
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.backButton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-primary);
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
