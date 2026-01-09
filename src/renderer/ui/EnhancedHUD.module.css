@@ -1,0 +1,402 @@
+.hudContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+  color: #00ff88;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Top Bar */
+.topBar {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px 30px;
+  border-radius: 25px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.flightMode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.armed {
+  color: #00ff00;
+  font-weight: bold;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.disarmed {
+  color: #888888;
+}
+
+.mode {
+  font-size: 0.8rem;
+  color: #00ccff;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Compass */
+.compass {
+  width: 200px;
+  text-align: center;
+}
+
+.compassStrip {
+  position: relative;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.compassPoint {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.compassIndicator {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff6600;
+  font-size: 0.8rem;
+}
+
+.headingValue {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+/* Status Icons */
+.statusIcons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.gpsStatus, .battery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon {
+  font-size: 1.2rem;
+}
+
+.signalBars {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.signalBar {
+  width: 4px;
+  background: #333;
+  border-radius: 1px;
+}
+
+.signalBar:nth-child(1) { height: 6px; }
+.signalBar:nth-child(2) { height: 10px; }
+.signalBar:nth-child(3) { height: 14px; }
+.signalBar:nth-child(4) { height: 18px; }
+
+.signalBar.active {
+  background: #00ff00;
+  box-shadow: 0 0 5px #00ff00;
+}
+
+/* Left Panel - Altitude */
+.leftPanel {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.altitudeGauge, .speedGauge {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  text-align: center;
+}
+
+.gaugeLabel {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.gaugeValue {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.gaugeUnit {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.verticalBar {
+  width: 20px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  margin-top: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.verticalFill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, #00ff88, #00ccff);
+  border-radius: 10px;
+  transition: height 0.1s ease-out;
+}
+
+/* Right Panel - Speed */
+.rightPanel {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Center Panel - Artificial Horizon */
+.centerPanel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.artificialHorizon {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(0, 255, 136, 0.5);
+  position: relative;
+  background: #000;
+}
+
+.horizonBall {
+  position: absolute;
+  width: 300%;
+  height: 300%;
+  top: -100%;
+  left: -100%;
+  transition: transform 0.05s ease-out;
+}
+
+.sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, #1a3a5c, #4a7a9c);
+}
+
+.ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to bottom, #8b6914, #3d2f0a);
+}
+
+.horizonLine {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ffffff;
+  transform: translateY(-50%);
+}
+
+.pitchMark {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pitchMarkLine {
+  width: 40px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.pitchMarkLabel {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.aircraftReference {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.aircraftWing {
+  width: 30px;
+  height: 3px;
+  background: #ff6600;
+  border-radius: 2px;
+}
+
+.aircraftCenter {
+  width: 10px;
+  height: 10px;
+  background: #ff6600;
+  border-radius: 50%;
+}
+
+.attitudeValues {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 15px;
+  font-size: 0.9rem;
+}
+
+/* Bottom Bar */
+.bottomBar {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 15px 30px;
+  border-radius: 15px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.throttleGauge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.throttleLabel {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.throttleBar {
+  width: 150px;
+  height: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.throttleFill {
+  height: 100%;
+  background: linear-gradient(to right, #00ff88, #ffaa00, #ff4444);
+  border-radius: 8px;
+  transition: width 0.05s ease-out;
+}
+
+.throttleValue {
+  font-size: 1rem;
+  font-weight: bold;
+  min-width: 50px;
+}
+
+.motorIndicators {
+  display: flex;
+  gap: 15px;
+}
+
+.motorGauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.motorLabel {
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.motorBar {
+  width: 12px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.motorFill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 6px;
+  transition: height 0.05s ease-out;
+}
+
+.motorRPM {
+  font-size: 0.6rem;
+  color: #888;
+}
+
+/* Warning */
+.warning {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 10px 30px;
+  border-radius: 5px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: blink 0.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

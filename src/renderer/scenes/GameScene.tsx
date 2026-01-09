@@ -1,22 +1,29 @@
 import { useRef, useEffect, useState } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Sky, Grid, Environment } from '@react-three/drei';
+import { useFrame, useThree } from '@react-three/fiber';
+import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
-import { Drone } from './Drone';
+// Drone model is now in DroneModel component
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
 import { useGameManager } from '../hooks/useGameManager';
 import { useCameraController } from '../hooks/useCameraController';
+import { PostProcessingEffects } from '../components/PostProcessingEffects';
+import { Environment } from '../components/Environment';
+import { DroneModel } from '../components/DroneModel';
+import { ParticleEffects } from '../components/ParticleEffects';
+import { Terrain } from '../components/Terrain';
 import type { MissionObjective } from '@shared/types';
 
 export function GameScene(): JSX.Element {
   const droneRef = useRef<THREE.Group>(null);
   const cameraController = useCameraController('chase');
+  const { scene } = useThree();
 
   const isPlaying = useGameStore((state) => state.isPlaying);
   const isPaused = useGameStore((state) => state.isPaused);
   const currentScreen = useGameStore((state) => state.currentScreen);
   const tick = useGameStore((state) => state.tick);
+  const droneState = useGameStore((state) => state.drone);
   const updateInput = useInputStore((state) => state.update);
 
   // Game manager with all systems
@@ -27,6 +34,19 @@ export function GameScene(): JSX.Element {
   const [tutorialTask, setTutorialTask] = useState(tutorial.getCurrentTask());
   const [missionState, setMissionState] = useState(mission.getCurrentMissionState());
   const [nextObjective, setNextObjective] = useState<MissionObjective | null>(null);
+
+  // State for particles and effects
+  const [dronePosition, setDronePosition] = useState(new THREE.Vector3(0, 0, 0));
+  const [droneVelocity, setDroneVelocity] = useState(new THREE.Vector3(0, 0, 0));
+  const [motorRPM, setMotorRPM] = useState<[number, number, number, number]>([0, 0, 0, 0]);
+  const [timeOfDay] = useState<'dawn' | 'day' | 'dusk' | 'night'>('day');
+  const [weather] = useState<'clear' | 'cloudy' | 'foggy'>('clear');
+  const [terrainType] = useState<'grass' | 'desert' | 'snow' | 'urban'>('grass');
+
+  // Enable shadows
+  useEffect(() => {
+    scene.fog = weather === 'foggy' ? new THREE.Fog(0xcccccc, 10, 150) : null;
+  }, [scene, weather]);
 
   // Initialize audio on first click
   useEffect(() => {
@@ -72,6 +92,19 @@ export function GameScene(): JSX.Element {
 
       // Update camera based on current mode
       cameraController.update(physicsState.position, euler, dt);
+
+      // Update state for effects
+      setDronePosition(new THREE.Vector3(
+        physicsState.position.x,
+        physicsState.position.y,
+        physicsState.position.z
+      ));
+      setDroneVelocity(new THREE.Vector3(
+        physicsState.velocity.x,
+        physicsState.velocity.y,
+        physicsState.velocity.z
+      ));
+      setMotorRPM(physicsState.motorRPM);
     }
 
     // Update 3D scene state for markers
@@ -92,40 +125,18 @@ export function GameScene(): JSX.Element {
 
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <directionalLight
-        position={[50, 50, 25]}
-        intensity={1}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
-      />
+      {/* Post-processing effects */}
+      <PostProcessingEffects enabled={true} quality="medium" />
 
-      {/* Sky */}
-      <Sky
-        distance={450000}
-        sunPosition={[50, 50, 25]}
-        inclination={0.6}
-        azimuth={0.25}
-      />
+      {/* Environment (sky, clouds, lighting) */}
+      <Environment timeOfDay={timeOfDay} weather={weather} />
 
-      {/* Environment */}
-      <Environment preset="sunset" />
+      {/* Terrain with procedural details */}
+      <Terrain size={200} resolution={64} heightScale={2} type={terrainType} />
 
-      {/* Ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[1000, 1000]} />
-        <meshStandardMaterial color="#4a7c59" />
-      </mesh>
-
-      {/* Grid */}
+      {/* Grid overlay */}
       <Grid
-        position={[0, 0.01, 0]}
+        position={[0, 0.02, 0]}
         args={[100, 100]}
         cellSize={1}
         cellThickness={0.5}
@@ -138,11 +149,22 @@ export function GameScene(): JSX.Element {
         followCamera={false}
       />
 
-      {/* Landing pad */}
-      <LandingPad position={[0, 0.02, 0]} />
+      {/* Particle effects */}
+      <ParticleEffects
+        position={dronePosition}
+        motorRPM={motorRPM}
+        velocity={droneVelocity}
+        altitude={dronePosition.y}
+        armed={droneState.isArmed}
+      />
 
-      {/* Drone */}
-      <Drone ref={droneRef} />
+      {/* Drone with enhanced model */}
+      <group ref={droneRef}>
+        <DroneModel motorRPM={motorRPM} armed={droneState.isArmed} />
+      </group>
+
+      {/* Legacy drone for fallback */}
+      {/* <Drone ref={droneRef} /> */}
 
       {/* Training gates for free play */}
       {currentScreen === 'freePlay' && (
@@ -150,6 +172,8 @@ export function GameScene(): JSX.Element {
           <TrainingGate position={[10, 3, 0]} />
           <TrainingGate position={[20, 4, 5]} rotation={[0, Math.PI / 4, 0]} />
           <TrainingGate position={[30, 3, -5]} rotation={[0, -Math.PI / 4, 0]} />
+          <TrainingGate position={[-15, 5, 10]} rotation={[0, Math.PI / 2, 0]} />
+          <TrainingGate position={[-25, 3, -10]} rotation={[0, -Math.PI / 3, 0]} />
         </>
       )}
 
@@ -174,49 +198,6 @@ export function GameScene(): JSX.Element {
   );
 }
 
-function LandingPad({ position }: { position: [number, number, number] }): JSX.Element {
-  return (
-    <group position={position}>
-      {/* Pad base */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[3, 32]} />
-        <meshStandardMaterial color="#333" />
-      </mesh>
-
-      {/* H marking */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[0.4, 2]} />
-        <meshStandardMaterial color="#fff" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0.5, 0.01, 0]}>
-        <planeGeometry args={[0.4, 2]} />
-        <meshStandardMaterial color="#fff" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.5, 0.01, 0]}>
-        <planeGeometry args={[0.4, 2]} />
-        <meshStandardMaterial color="#fff" />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[1.4, 0.4]} />
-        <meshStandardMaterial color="#fff" />
-      </mesh>
-
-      {/* Corner lights */}
-      {[
-        [2.5, 0.1, 2.5],
-        [2.5, 0.1, -2.5],
-        [-2.5, 0.1, 2.5],
-        [-2.5, 0.1, -2.5],
-      ].map((pos, i) => (
-        <mesh key={i} position={pos as [number, number, number]}>
-          <sphereGeometry args={[0.1, 16, 16]} />
-          <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={2} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
 interface TrainingGateProps {
   position: [number, number, number];
   rotation?: [number, number, number];
@@ -225,32 +206,60 @@ interface TrainingGateProps {
 function TrainingGate({ position, rotation = [0, 0, 0] }: TrainingGateProps): JSX.Element {
   return (
     <group position={position} rotation={rotation}>
-      {/* Gate frame */}
-      <mesh position={[-2, 0, 0]}>
+      {/* Gate frame with glow */}
+      <mesh position={[-2, 0, 0]} castShadow>
         <boxGeometry args={[0.2, 4, 0.2]} />
-        <meshStandardMaterial color="#ff4444" />
+        <meshStandardMaterial
+          color="#ff4444"
+          emissive="#ff2222"
+          emissiveIntensity={0.3}
+        />
       </mesh>
-      <mesh position={[2, 0, 0]}>
+      <mesh position={[2, 0, 0]} castShadow>
         <boxGeometry args={[0.2, 4, 0.2]} />
-        <meshStandardMaterial color="#ff4444" />
+        <meshStandardMaterial
+          color="#ff4444"
+          emissive="#ff2222"
+          emissiveIntensity={0.3}
+        />
       </mesh>
-      <mesh position={[0, 2, 0]}>
+      <mesh position={[0, 2, 0]} castShadow>
         <boxGeometry args={[4.2, 0.2, 0.2]} />
-        <meshStandardMaterial color="#ff4444" />
+        <meshStandardMaterial
+          color="#ff4444"
+          emissive="#ff2222"
+          emissiveIntensity={0.3}
+        />
       </mesh>
 
-      {/* Gate indicator */}
+      {/* Gate indicator ring */}
       <mesh position={[0, 0, 0.1]} rotation={[0, 0, 0]}>
         <ringGeometry args={[1.5, 1.8, 32]} />
         <meshStandardMaterial
           color="#00ffff"
           emissive="#00ffff"
-          emissiveIntensity={0.5}
+          emissiveIntensity={1}
           transparent
-          opacity={0.5}
+          opacity={0.6}
           side={THREE.DoubleSide}
         />
       </mesh>
+
+      {/* Inner glow */}
+      <mesh position={[0, 0, 0]}>
+        <ringGeometry args={[0.5, 1.5, 32]} />
+        <meshStandardMaterial
+          color="#00ffff"
+          emissive="#00ffff"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.2}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Point lights for glow effect */}
+      <pointLight position={[0, 0, 0.2]} color="#00ffff" intensity={1} distance={5} />
     </group>
   );
 }
@@ -265,10 +274,17 @@ function ObjectiveMarker({ objective, isNext }: ObjectiveMarkerProps): JSX.Eleme
 
   if (completed) {
     return (
-      <mesh position={[position.x, position.y, position.z]}>
-        <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={0.3} />
-      </mesh>
+      <group position={[position.x, position.y, position.z]}>
+        <mesh>
+          <sphereGeometry args={[0.3, 16, 16]} />
+          <meshStandardMaterial
+            color="#00ff88"
+            emissive="#00ff88"
+            emissiveIntensity={0.5}
+          />
+        </mesh>
+        <pointLight color="#00ff88" intensity={0.5} distance={3} />
+      </group>
     );
   }
 
@@ -279,20 +295,27 @@ function ObjectiveMarker({ objective, isNext }: ObjectiveMarkerProps): JSX.Eleme
       return (
         <group position={[position.x, position.y, position.z]}>
           <mesh>
-            <torusGeometry args={[radius, 0.1, 16, 32]} />
+            <torusGeometry args={[radius, 0.15, 16, 32]} />
             <meshStandardMaterial
               color={color}
               emissive={color}
-              emissiveIntensity={isNext ? 1 : 0.3}
+              emissiveIntensity={isNext ? 1.5 : 0.5}
               transparent
-              opacity={0.8}
+              opacity={0.9}
             />
           </mesh>
           {isNext && (
-            <mesh>
-              <sphereGeometry args={[0.2, 16, 16]} />
-              <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
-            </mesh>
+            <>
+              <mesh>
+                <sphereGeometry args={[0.3, 16, 16]} />
+                <meshStandardMaterial
+                  color="#ffffff"
+                  emissive="#ffffff"
+                  emissiveIntensity={2}
+                />
+              </mesh>
+              <pointLight color={color} intensity={2} distance={10} />
+            </>
           )}
         </group>
       );
@@ -305,16 +328,19 @@ function ObjectiveMarker({ objective, isNext }: ObjectiveMarkerProps): JSX.Eleme
             <meshStandardMaterial
               color={color}
               emissive={color}
-              emissiveIntensity={isNext ? 1 : 0.3}
+              emissiveIntensity={isNext ? 1.5 : 0.5}
               transparent
-              opacity={0.8}
+              opacity={0.9}
               side={THREE.DoubleSide}
             />
           </mesh>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
             <circleGeometry args={[radius - 0.3, 32]} />
-            <meshStandardMaterial color="#333" transparent opacity={0.5} />
+            <meshStandardMaterial color="#333" transparent opacity={0.6} />
           </mesh>
+          {isNext && (
+            <pointLight position={[0, 1, 0]} color={color} intensity={1} distance={8} />
+          )}
         </group>
       );
 
@@ -326,12 +352,15 @@ function ObjectiveMarker({ objective, isNext }: ObjectiveMarkerProps): JSX.Eleme
             <meshStandardMaterial
               color={color}
               emissive={color}
-              emissiveIntensity={isNext ? 0.5 : 0.2}
+              emissiveIntensity={isNext ? 0.8 : 0.3}
               transparent
-              opacity={0.3}
+              opacity={0.4}
               wireframe
             />
           </mesh>
+          {isNext && (
+            <pointLight color={color} intensity={1} distance={radius * 3} />
+          )}
         </group>
       );
 
@@ -343,9 +372,10 @@ function ObjectiveMarker({ objective, isNext }: ObjectiveMarkerProps): JSX.Eleme
             <meshStandardMaterial
               color={color}
               emissive={color}
-              emissiveIntensity={isNext ? 1 : 0.5}
+              emissiveIntensity={isNext ? 1.5 : 0.8}
             />
           </mesh>
+          <pointLight color={color} intensity={isNext ? 2 : 0.5} distance={5} />
         </group>
       );
 
@@ -371,9 +401,9 @@ function TargetMarker({ position }: TargetMarkerProps): JSX.Element {
         <meshStandardMaterial
           color="#00ff88"
           emissive="#00ff88"
-          emissiveIntensity={1}
+          emissiveIntensity={1.5}
           transparent
-          opacity={0.6}
+          opacity={0.7}
         />
       </mesh>
       <mesh>
@@ -381,12 +411,13 @@ function TargetMarker({ position }: TargetMarkerProps): JSX.Element {
         <meshStandardMaterial
           color="#00ff88"
           emissive="#00ff88"
-          emissiveIntensity={0.5}
+          emissiveIntensity={0.8}
           transparent
-          opacity={0.4}
+          opacity={0.5}
           side={THREE.DoubleSide}
         />
       </mesh>
+      <pointLight color="#00ff88" intensity={2} distance={8} />
     </group>
   );
 }
@@ -397,16 +428,28 @@ interface AltitudeRingProps {
 
 function AltitudeRing({ altitude }: AltitudeRingProps): JSX.Element {
   return (
-    <mesh position={[0, altitude, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[8, 10, 64]} />
-      <meshStandardMaterial
-        color="#00ff88"
-        emissive="#00ff88"
-        emissiveIntensity={0.3}
-        transparent
-        opacity={0.2}
-        side={THREE.DoubleSide}
-      />
-    </mesh>
+    <group position={[0, altitude, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[8, 10, 64]} />
+        <meshStandardMaterial
+          color="#00ff88"
+          emissive="#00ff88"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.3}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {/* Altitude indicator lights */}
+      {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((angle, i) => (
+        <pointLight
+          key={i}
+          position={[Math.cos(angle) * 9, 0, Math.sin(angle) * 9]}
+          color="#00ff88"
+          intensity={0.5}
+          distance={5}
+        />
+      ))}
+    </group>
   );
 }
