@@ -1,17 +1,17 @@
 import { useRef, useEffect, useState } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { Sky, Grid, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { Drone } from './Drone';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
 import { useGameManager } from '../hooks/useGameManager';
+import { useCameraController } from '../hooks/useCameraController';
 import type { MissionObjective } from '@shared/types';
 
 export function GameScene(): JSX.Element {
-  const { camera } = useThree();
-  const cameraTarget = useRef(new THREE.Vector3());
   const droneRef = useRef<THREE.Group>(null);
+  const cameraController = useCameraController('chase');
 
   const isPlaying = useGameStore((state) => state.isPlaying);
   const isPaused = useGameStore((state) => state.isPaused);
@@ -56,7 +56,7 @@ export function GameScene(): JSX.Element {
     // Update all game systems
     const result = update(dt);
 
-    // Update drone mesh
+    // Update drone mesh and camera
     if (droneRef.current && result) {
       const { physicsState, euler } = result;
       droneRef.current.position.set(
@@ -70,16 +70,8 @@ export function GameScene(): JSX.Element {
       droneRef.current.rotation.z = euler.roll * (Math.PI / 180);
       droneRef.current.rotation.y = euler.yaw * (Math.PI / 180);
 
-      // Update camera to follow drone
-      const camOffset = new THREE.Vector3(0, 3, 8);
-      camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.yaw * (Math.PI / 180));
-      cameraTarget.current.set(
-        physicsState.position.x + camOffset.x,
-        physicsState.position.y + camOffset.y,
-        physicsState.position.z + camOffset.z
-      );
-      camera.position.lerp(cameraTarget.current, 0.05);
-      camera.lookAt(physicsState.position.x, physicsState.position.y, physicsState.position.z);
+      // Update camera based on current mode
+      cameraController.update(physicsState.position, euler, dt);
     }
 
     // Update 3D scene state for markers
@@ -94,12 +86,6 @@ export function GameScene(): JSX.Element {
     // Update game time
     tick(dt);
   });
-
-  // Initialize camera position
-  useEffect(() => {
-    camera.position.set(0, 5, 10);
-    camera.lookAt(0, 1, 0);
-  }, [camera]);
 
   // Get mission objectives for rendering gates
   const missionObjectives = missionState?.mission.objectives || [];

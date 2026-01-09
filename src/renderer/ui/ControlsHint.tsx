@@ -30,6 +30,16 @@ const CONTROL_GROUPS: ControlGroup[] = [
       { key: 'H', action: 'Toggle Hints' },
     ],
   },
+  {
+    title: 'Camera',
+    controls: [
+      { key: 'C', action: 'Cycle Camera Mode' },
+      { key: '4', action: 'Chase Camera' },
+      { key: '5', action: 'FPV Camera' },
+      { key: '6', action: 'Orbit Camera' },
+      { key: '7', action: 'Cinematic Camera' },
+    ],
+  },
 ];
 
 export function ControlsHint(): JSX.Element {
@@ -104,7 +114,7 @@ export function ControlsHint(): JSX.Element {
       ) : (
         <div className={styles.compactContent}>
           <span className={styles.compactHint}>WASD + SPACE to fly</span>
-          <span className={styles.compactHint}>R to arm • ESC to pause</span>
+          <span className={styles.compactHint}>R to arm • C for camera • ESC to pause</span>
           <span className={styles.compactHint}>Press H for full controls</span>
         </div>
       )}
