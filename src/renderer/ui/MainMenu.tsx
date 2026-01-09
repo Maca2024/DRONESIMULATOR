@@ -11,11 +11,21 @@ const missionSystem = new MissionSystem();
 export function MainMenu(): JSX.Element {
   const setScreen = useGameStore((state) => state.setScreen);
   const startGame = useGameStore((state) => state.startGame);
+  const toggleArm = useGameStore((state) => state.toggleArm);
 
   const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'tutorial' | 'missions'>('none');
 
   const handleFreePlay = (): void => {
     startGame('freePlay');
+  };
+
+  // Quick test mode - auto arms drone and starts at hover altitude
+  const handleQuickTest = (): void => {
+    startGame('freePlay');
+    // Auto-arm after a short delay to ensure state is ready
+    setTimeout(() => {
+      toggleArm();
+    }, 100);
   };
 
   const handleTutorialSelect = (level: TutorialLevel): void => {
@@ -48,6 +58,13 @@ export function MainMenu(): JSX.Element {
 
         {activeSubmenu === 'none' && (
           <nav className={styles.menu}>
+            {/* Quick Test - prominent button for easy testing */}
+            <button className={`${styles.menuButton} ${styles.quickTest}`} onClick={handleQuickTest}>
+              <span className={styles.buttonIcon}>🎮</span>
+              <span className={styles.buttonText}>Quick Test</span>
+              <span className={styles.buttonHint}>Auto-armed, ready to fly!</span>
+            </button>
+
             <button className={styles.menuButton} onClick={handleFreePlay}>
               <span className={styles.buttonIcon}>🚁</span>
               <span className={styles.buttonText}>Free Flight</span>
