@@ -1,0 +1,192 @@
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.levelBadge {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.levelLabel {
+  background: linear-gradient(135deg, #4a9eff, #00ff88);
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.taskNumber {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+}
+
+.taskPanel {
+  position: absolute;
+  top: 140px;
+  left: 20px;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+  pointer-events: auto;
+}
+
+.taskName {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: bold;
+  color: #4a9eff;
+}
+
+.taskDescription {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+}
+
+.instructionsTitle {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.instructionList {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: none;
+}
+
+.instruction {
+  position: relative;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.instruction::before {
+  content: "›";
+  position: absolute;
+  left: -16px;
+  color: #00ff88;
+  font-weight: bold;
+}
+
+.progressContainer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progressLabel {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.progressBar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9eff, #00ff88);
+  border-radius: 4px;
+  transition: width 0.1s ease;
+}
+
+.progressTime {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: right;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.resetBtn,
+.skipBtn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resetBtn {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.resetBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.skipBtn {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 170, 0, 0.3);
+}
+
+.skipBtn:hover {
+  background: rgba(255, 170, 0, 0.3);
+}
+
+.attempts {
+  margin-top: 12px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.altitudeIndicator {
+  position: absolute;
+  right: 100px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.altitudeLine {
+  width: 100px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ff88);
+}
+
+.altitudeLabel {
+  font-size: 12px;
+  color: #00ff88;
+  white-space: nowrap;
+}

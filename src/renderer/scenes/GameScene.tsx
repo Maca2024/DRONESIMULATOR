@@ -1,11 +1,12 @@
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Sky, Grid, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { Drone } from './Drone';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
-import { PhysicsEngine } from '../core/PhysicsEngine';
+import { useGameManager } from '../hooks/useGameManager';
+import type { MissionObjective } from '@shared/types';
 
 export function GameScene(): JSX.Element {
   const { camera } = useThree();
@@ -14,13 +15,33 @@ export function GameScene(): JSX.Element {
 
   const isPlaying = useGameStore((state) => state.isPlaying);
   const isPaused = useGameStore((state) => state.isPaused);
-  const updateDrone = useGameStore((state) => state.updateDrone);
+  const currentScreen = useGameStore((state) => state.currentScreen);
   const tick = useGameStore((state) => state.tick);
   const updateInput = useInputStore((state) => state.update);
-  const getInput = useInputStore((state) => state.getInput);
 
-  // Physics engine instance
-  const physics = useMemo(() => new PhysicsEngine(), []);
+  // Game manager with all systems
+  const gameManager = useGameManager();
+  const { tutorial, mission, update, initAudio } = gameManager;
+
+  // Local state for 3D scene rendering
+  const [tutorialTask, setTutorialTask] = useState(tutorial.getCurrentTask());
+  const [missionState, setMissionState] = useState(mission.getCurrentMissionState());
+  const [nextObjective, setNextObjective] = useState<MissionObjective | null>(null);
+
+  // Initialize audio on first click
+  useEffect(() => {
+    const handleInteraction = (): void => {
+      initAudio();
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, [initAudio]);
 
   // Game loop
   useFrame((_, delta) => {
@@ -32,31 +53,12 @@ export function GameScene(): JSX.Element {
     // Update input
     updateInput(dt * 1000);
 
-    // Get current input
-    const input = getInput();
-
-    // Update physics (run at higher frequency for stability)
-    const physicsSteps = 4;
-    const physicsStep = dt / physicsSteps;
-    for (let i = 0; i < physicsSteps; i++) {
-      physics.update(input, physicsStep);
-    }
-
-    // Get physics state
-    const physicsState = physics.getState();
-    const euler = physics.getEulerAngles();
-
-    // Update drone state in store
-    updateDrone({
-      position: physicsState.position,
-      velocity: physicsState.velocity,
-      rotation: physicsState.rotation,
-      angularVelocity: physicsState.angularVelocity,
-      motorRPM: physicsState.motorRPM,
-    });
+    // Update all game systems
+    const result = update(dt);
 
     // Update drone mesh
-    if (droneRef.current) {
+    if (droneRef.current && result) {
+      const { physicsState, euler } = result;
       droneRef.current.position.set(
         physicsState.position.x,
         physicsState.position.y,
@@ -67,18 +69,27 @@ export function GameScene(): JSX.Element {
       droneRef.current.rotation.x = euler.pitch * (Math.PI / 180);
       droneRef.current.rotation.z = euler.roll * (Math.PI / 180);
       droneRef.current.rotation.y = euler.yaw * (Math.PI / 180);
+
+      // Update camera to follow drone
+      const camOffset = new THREE.Vector3(0, 3, 8);
+      camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.yaw * (Math.PI / 180));
+      cameraTarget.current.set(
+        physicsState.position.x + camOffset.x,
+        physicsState.position.y + camOffset.y,
+        physicsState.position.z + camOffset.z
+      );
+      camera.position.lerp(cameraTarget.current, 0.05);
+      camera.lookAt(physicsState.position.x, physicsState.position.y, physicsState.position.z);
     }
 
-    // Update camera to follow drone
-    const camOffset = new THREE.Vector3(0, 3, 8);
-    camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.yaw * (Math.PI / 180));
-    cameraTarget.current.set(
-      physicsState.position.x + camOffset.x,
-      physicsState.position.y + camOffset.y,
-      physicsState.position.z + camOffset.z
-    );
-    camera.position.lerp(cameraTarget.current, 0.05);
-    camera.lookAt(physicsState.position.x, physicsState.position.y, physicsState.position.z);
+    // Update 3D scene state for markers
+    if (currentScreen === 'tutorial') {
+      setTutorialTask(tutorial.getCurrentTask());
+    }
+    if (currentScreen === 'mission') {
+      setMissionState(mission.getCurrentMissionState());
+      setNextObjective(mission.getNextObjective());
+    }
 
     // Update game time
     tick(dt);
@@ -89,6 +100,9 @@ export function GameScene(): JSX.Element {
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 1, 0);
   }, [camera]);
+
+  // Get mission objectives for rendering gates
+  const missionObjectives = missionState?.mission.objectives || [];
 
   return (
     <>
@@ -144,10 +158,32 @@ export function GameScene(): JSX.Element {
       {/* Drone */}
       <Drone ref={droneRef} />
 
-      {/* Training gates */}
-      <TrainingGate position={[10, 3, 0]} />
-      <TrainingGate position={[20, 4, 5]} rotation={[0, Math.PI / 4, 0]} />
-      <TrainingGate position={[30, 3, -5]} rotation={[0, -Math.PI / 4, 0]} />
+      {/* Training gates for free play */}
+      {currentScreen === 'freePlay' && (
+        <>
+          <TrainingGate position={[10, 3, 0]} />
+          <TrainingGate position={[20, 4, 5]} rotation={[0, Math.PI / 4, 0]} />
+          <TrainingGate position={[30, 3, -5]} rotation={[0, -Math.PI / 4, 0]} />
+        </>
+      )}
+
+      {/* Mission objectives */}
+      {currentScreen === 'mission' &&
+        missionObjectives.map((obj) => (
+          <ObjectiveMarker
+            key={obj.id}
+            objective={obj}
+            isNext={nextObjective?.id === obj.id}
+          />
+        ))}
+
+      {/* Tutorial markers */}
+      {currentScreen === 'tutorial' && tutorialTask?.targetPosition && (
+        <TargetMarker position={tutorialTask.targetPosition} />
+      )}
+      {currentScreen === 'tutorial' && tutorialTask?.targetAltitude && (
+        <AltitudeRing altitude={tutorialTask.targetAltitude} />
+      )}
     </>
   );
 }
@@ -230,5 +266,161 @@ function TrainingGate({ position, rotation = [0, 0, 0] }: TrainingGateProps): JS
         />
       </mesh>
     </group>
+  );
+}
+
+interface ObjectiveMarkerProps {
+  objective: import('@shared/types').MissionObjective;
+  isNext: boolean;
+}
+
+function ObjectiveMarker({ objective, isNext }: ObjectiveMarkerProps): JSX.Element {
+  const { position, type, completed, radius } = objective;
+
+  if (completed) {
+    return (
+      <mesh position={[position.x, position.y, position.z]}>
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshStandardMaterial color="#00ff88" emissive="#00ff88" emissiveIntensity={0.3} />
+      </mesh>
+    );
+  }
+
+  const color = isNext ? '#ffaa00' : '#4a9eff';
+
+  switch (type) {
+    case 'checkpoint':
+      return (
+        <group position={[position.x, position.y, position.z]}>
+          <mesh>
+            <torusGeometry args={[radius, 0.1, 16, 32]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={isNext ? 1 : 0.3}
+              transparent
+              opacity={0.8}
+            />
+          </mesh>
+          {isNext && (
+            <mesh>
+              <sphereGeometry args={[0.2, 16, 16]} />
+              <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
+            </mesh>
+          )}
+        </group>
+      );
+
+    case 'land':
+      return (
+        <group position={[position.x, 0.05, position.z]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[radius - 0.2, radius, 32]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={isNext ? 1 : 0.3}
+              transparent
+              opacity={0.8}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+            <circleGeometry args={[radius - 0.3, 32]} />
+            <meshStandardMaterial color="#333" transparent opacity={0.5} />
+          </mesh>
+        </group>
+      );
+
+    case 'hover':
+      return (
+        <group position={[position.x, position.y, position.z]}>
+          <mesh>
+            <boxGeometry args={[radius * 2, radius * 2, radius * 2]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={isNext ? 0.5 : 0.2}
+              transparent
+              opacity={0.3}
+              wireframe
+            />
+          </mesh>
+        </group>
+      );
+
+    case 'collect':
+      return (
+        <group position={[position.x, position.y, position.z]}>
+          <mesh>
+            <octahedronGeometry args={[0.5]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={isNext ? 1 : 0.5}
+            />
+          </mesh>
+        </group>
+      );
+
+    default:
+      return (
+        <mesh position={[position.x, position.y, position.z]}>
+          <sphereGeometry args={[radius, 16, 16]} />
+          <meshStandardMaterial color={color} transparent opacity={0.5} />
+        </mesh>
+      );
+  }
+}
+
+interface TargetMarkerProps {
+  position: { x: number; y: number; z: number };
+}
+
+function TargetMarker({ position }: TargetMarkerProps): JSX.Element {
+  return (
+    <group position={[position.x, position.y, position.z]}>
+      <mesh>
+        <sphereGeometry args={[0.5, 16, 16]} />
+        <meshStandardMaterial
+          color="#00ff88"
+          emissive="#00ff88"
+          emissiveIntensity={1}
+          transparent
+          opacity={0.6}
+        />
+      </mesh>
+      <mesh>
+        <ringGeometry args={[1, 1.2, 32]} />
+        <meshStandardMaterial
+          color="#00ff88"
+          emissive="#00ff88"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.4}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+interface AltitudeRingProps {
+  altitude: number;
+}
+
+function AltitudeRing({ altitude }: AltitudeRingProps): JSX.Element {
+  return (
+    <mesh position={[0, altitude, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[8, 10, 64]} />
+      <meshStandardMaterial
+        color="#00ff88"
+        emissive="#00ff88"
+        emissiveIntensity={0.3}
+        transparent
+        opacity={0.2}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
   );
 }

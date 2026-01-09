@@ -1,0 +1,260 @@
+.missionHud {
+  position: absolute;
+  top: 80px;
+  right: 20px;
+  width: 280px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 170, 0, 0.5);
+  border-radius: 12px;
+  padding: 16px;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.missionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 12px;
+}
+
+.missionName {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffaa00;
+}
+
+.missionType {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: rgba(255, 170, 0, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 1px;
+}
+
+.timeScore {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.timeContainer,
+.scoreContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.timeLabel,
+.scoreLabel {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.time {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  font-family: monospace;
+}
+
+.time.overtime {
+  color: #ff4444;
+}
+
+.parTime {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.scoreValue {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff88;
+}
+
+.progressSection {
+  margin-bottom: 16px;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+}
+
+.progressBar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffaa00, #00ff88);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.objectives {
+  margin-bottom: 16px;
+}
+
+.objective {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.objective.completed {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: line-through;
+}
+
+.objective.current {
+  color: #fff;
+}
+
+.checkmark {
+  width: 16px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.objective.completed .checkmark {
+  color: #00ff88;
+}
+
+.objective.current .checkmark {
+  color: #ffaa00;
+}
+
+.objectiveType {
+  flex: 1;
+  text-transform: capitalize;
+}
+
+.distance {
+  font-family: monospace;
+  color: #4a9eff;
+}
+
+.nextObjective {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 170, 0, 0.1);
+  border: 1px solid rgba(255, 170, 0, 0.3);
+  border-radius: 8px;
+}
+
+.directionArrow {
+  font-size: 32px;
+  color: #ffaa00;
+  line-height: 1;
+}
+
+.objectiveInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.nextLabel {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.nextType {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+.nextDistance {
+  font-size: 16px;
+  font-weight: bold;
+  color: #4a9eff;
+  font-family: monospace;
+}
+
+.crashes {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.crashIcon {
+  font-size: 14px;
+}
+
+.crashCount {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ff4444;
+}
+
+.completeOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.95);
+  border-radius: 12px;
+  z-index: 10;
+}
+
+.completeOverlay.passed {
+  border-color: #00ff88;
+  background: rgba(0, 50, 30, 0.95);
+}
+
+.completeOverlay.failed {
+  border-color: #ff4444;
+  background: rgba(50, 0, 0, 0.95);
+}
+
+.completeTitle {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.passed .completeTitle {
+  color: #00ff88;
+}
+
+.failed .completeTitle {
+  color: #ff4444;
+}
+
+.completeStats {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  line-height: 1.8;
+}

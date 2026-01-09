@@ -45,7 +45,7 @@ module.exports = {
       ignore: [
         'args', 'position', 'rotation', 'scale', 'castShadow', 'receiveShadow',
         'intensity', 'attach', 'array', 'count', 'itemSize', 'object',
-        'transparent', 'opacity', 'side', 'metalness', 'roughness',
+        'transparent', 'opacity', 'side', 'metalness', 'roughness', 'wireframe',
         'emissive', 'emissiveIntensity', 'sizeAttenuation', 'geometry', 'material',
         'shadow-mapSize', 'shadow-camera-far', 'shadow-camera-left',
         'shadow-camera-right', 'shadow-camera-top', 'shadow-camera-bottom',
