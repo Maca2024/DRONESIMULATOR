@@ -1,11 +1,11 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Sky, Grid, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import { Drone } from './Drone';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
-import { PHYSICS } from '@shared/constants';
+import { PhysicsEngine } from '../core/PhysicsEngine';
 
 export function GameScene(): JSX.Element {
   const { camera } = useThree();
@@ -15,84 +15,73 @@ export function GameScene(): JSX.Element {
   const isPlaying = useGameStore((state) => state.isPlaying);
   const isPaused = useGameStore((state) => state.isPaused);
   const updateDrone = useGameStore((state) => state.updateDrone);
-  const drone = useGameStore((state) => state.drone);
   const tick = useGameStore((state) => state.tick);
   const updateInput = useInputStore((state) => state.update);
   const getInput = useInputStore((state) => state.getInput);
+
+  // Physics engine instance
+  const physics = useMemo(() => new PhysicsEngine(), []);
 
   // Game loop
   useFrame((_, delta) => {
     if (!isPlaying || isPaused) return;
 
+    // Clamp delta to prevent physics explosions
+    const dt = Math.min(delta, 0.05);
+
     // Update input
-    updateInput(delta * 1000);
+    updateInput(dt * 1000);
 
     // Get current input
     const input = getInput();
 
-    // Simple physics simulation
-    const thrustForce = input.throttle * 20;
-    const gravity = PHYSICS.GRAVITY;
+    // Update physics (run at higher frequency for stability)
+    const physicsSteps = 4;
+    const physicsStep = dt / physicsSteps;
+    for (let i = 0; i < physicsSteps; i++) {
+      physics.update(input, physicsStep);
+    }
 
-    // Calculate new velocity
-    const newVelocity = {
-      x: drone.velocity.x + input.roll * 10 * delta,
-      y: drone.velocity.y + (thrustForce - gravity) * delta,
-      z: drone.velocity.z - input.pitch * 10 * delta,
-    };
+    // Get physics state
+    const physicsState = physics.getState();
+    const euler = physics.getEulerAngles();
 
-    // Apply drag
-    const drag = 0.98;
-    newVelocity.x *= drag;
-    newVelocity.y *= drag;
-    newVelocity.z *= drag;
-
-    // Calculate new position
-    const newPosition = {
-      x: drone.position.x + newVelocity.x * delta,
-      y: Math.max(0.5, drone.position.y + newVelocity.y * delta),
-      z: drone.position.z + newVelocity.z * delta,
-    };
-
-    // Calculate rotation from velocity
-    const targetRoll = -input.roll * 0.5;
-    const targetPitch = input.pitch * 0.5;
-
-    // Update drone state
+    // Update drone state in store
     updateDrone({
-      position: newPosition,
-      velocity: newVelocity,
-      motorRPM: [
-        input.throttle * 10000,
-        input.throttle * 10000,
-        input.throttle * 10000,
-        input.throttle * 10000,
-      ],
+      position: physicsState.position,
+      velocity: physicsState.velocity,
+      rotation: physicsState.rotation,
+      angularVelocity: physicsState.angularVelocity,
+      motorRPM: physicsState.motorRPM,
     });
 
     // Update drone mesh
     if (droneRef.current) {
-      droneRef.current.position.set(newPosition.x, newPosition.y, newPosition.z);
-      droneRef.current.rotation.x = THREE.MathUtils.lerp(
-        droneRef.current.rotation.x,
-        targetPitch,
-        0.1
+      droneRef.current.position.set(
+        physicsState.position.x,
+        physicsState.position.y,
+        physicsState.position.z
       );
-      droneRef.current.rotation.z = THREE.MathUtils.lerp(
-        droneRef.current.rotation.z,
-        targetRoll,
-        0.1
-      );
-      droneRef.current.rotation.y += input.yaw * delta * 2;
+
+      // Apply rotation from physics
+      droneRef.current.rotation.x = euler.pitch * (Math.PI / 180);
+      droneRef.current.rotation.z = euler.roll * (Math.PI / 180);
+      droneRef.current.rotation.y = euler.yaw * (Math.PI / 180);
     }
 
     // Update camera to follow drone
-    cameraTarget.current.set(newPosition.x, newPosition.y + 2, newPosition.z + 8);
+    const camOffset = new THREE.Vector3(0, 3, 8);
+    camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), euler.yaw * (Math.PI / 180));
+    cameraTarget.current.set(
+      physicsState.position.x + camOffset.x,
+      physicsState.position.y + camOffset.y,
+      physicsState.position.z + camOffset.z
+    );
     camera.position.lerp(cameraTarget.current, 0.05);
-    camera.lookAt(newPosition.x, newPosition.y, newPosition.z);
+    camera.lookAt(physicsState.position.x, physicsState.position.y, physicsState.position.z);
 
     // Update game time
-    tick(delta);
+    tick(dt);
   });
 
   // Initialize camera position
