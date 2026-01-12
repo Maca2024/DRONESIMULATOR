@@ -32,6 +32,7 @@ export function HUD(): JSX.Element {
   const [gForce, setGForce] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [playbackState, setPlaybackState] = useState(flightRecorder.getPlaybackState());
   const lastVelocity = useRef({ x: 0, y: 0, z: 0 });
   const recordingStartTime = useRef(0);
 
@@ -132,6 +133,31 @@ export function HUD(): JSX.Element {
     const elapsed = (performance.now() - recordingStartTime.current) / 1000;
     setRecordingTime(elapsed);
   }, [isRecording, drone.position, drone.rotation, drone.motorRPM, drone.velocity, input]);
+
+  // Update playback state
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaybackState(flightRecorder.getPlaybackState());
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Playback controls
+  const handlePlayPause = useCallback(() => {
+    if (playbackState.isPlaying) {
+      flightRecorder.pausePlayback();
+    } else {
+      flightRecorder.startPlayback();
+    }
+  }, [playbackState.isPlaying]);
+
+  const handleStopPlayback = useCallback(() => {
+    flightRecorder.stopPlayback();
+  }, []);
+
+  const handleSpeedChange = useCallback((speed: number) => {
+    flightRecorder.setPlaybackSpeed(speed);
+  }, []);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -343,6 +369,43 @@ export function HUD(): JSX.Element {
           <div className={styles.recordingDot} />
           <span className={styles.recordingText}>REC</span>
           <span className={styles.recordingTime}>{formatTime(recordingTime)}</span>
+        </div>
+      )}
+
+      {/* Playback controls */}
+      {(playbackState.isPlaying || playbackState.progress > 0) && (
+        <div className={styles.playbackControls}>
+          <div className={styles.playbackHeader}>
+            <span className={styles.playbackTitle}>REPLAY</span>
+            <span className={styles.playbackTime}>
+              {formatTime(playbackState.currentTime / 1000)} / {formatTime(playbackState.duration / 1000)}
+            </span>
+          </div>
+          <div className={styles.playbackProgressBar}>
+            <div
+              className={styles.playbackProgress}
+              style={{ width: `${playbackState.progress * 100}%` }}
+            />
+          </div>
+          <div className={styles.playbackButtons}>
+            <button className={styles.playbackButton} onClick={handlePlayPause}>
+              {playbackState.isPlaying ? '⏸' : '▶'}
+            </button>
+            <button className={styles.playbackButton} onClick={handleStopPlayback}>
+              ⏹
+            </button>
+            <div className={styles.playbackSpeed}>
+              {[0.5, 1, 2, 4].map((speed) => (
+                <button
+                  key={speed}
+                  className={`${styles.speedButton} ${playbackState.speed === speed ? styles.speedActive : ''}`}
+                  onClick={() => handleSpeedChange(speed)}
+                >
+                  {speed}x
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

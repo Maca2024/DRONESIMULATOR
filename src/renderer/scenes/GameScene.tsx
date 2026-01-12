@@ -10,6 +10,7 @@ import { useCameraController } from '../hooks/useCameraController';
 import { PostProcessingEffects } from '../components/PostProcessingEffects';
 import { Environment } from '../components/Environment';
 import { DroneModel } from '../components/DroneModel';
+import { GhostDrone } from '../components/GhostDrone';
 import { ParticleEffects } from '../components/ParticleEffects';
 import { Terrain } from '../components/Terrain';
 import type { MissionObjective } from '@shared/types';
@@ -169,6 +170,9 @@ export function GameScene(): JSX.Element {
       <group ref={droneRef}>
         <DroneModel motorRPM={motorRPM} armed={droneState.isArmed} />
       </group>
+
+      {/* Ghost drone for replay playback */}
+      <GhostDrone opacity={0.6} color="#00ff88" />
 
       {/* Legacy drone for fallback */}
       {/* <Drone ref={droneRef} /> */}
