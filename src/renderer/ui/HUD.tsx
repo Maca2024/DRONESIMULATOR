@@ -5,6 +5,7 @@ import styles from './HUD.module.css';
 
 export function HUD(): JSX.Element {
   const drone = useGameStore((state) => state.drone);
+  const wind = useGameStore((state) => state.wind);
   const score = useGameStore((state) => state.score);
   const missionTime = useGameStore((state) => state.missionTime);
   const comboMultiplier = useGameStore((state) => state.comboMultiplier);
@@ -85,6 +86,20 @@ export function HUD(): JSX.Element {
             <span className={styles.label}>MODE</span>
             <span className={styles.value}>{drone.flightMode.toUpperCase()}</span>
           </div>
+          {wind.enabled && wind.speed > 0.1 && (
+            <div className={styles.infoItem}>
+              <span className={styles.label}>WIND</span>
+              <div className={styles.windIndicator}>
+                <span
+                  className={styles.windArrow}
+                  style={{ transform: `rotate(${wind.direction}deg)` }}
+                >
+                  ↑
+                </span>
+                <span className={styles.value}>{wind.speed.toFixed(1)}m/s</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className={styles.timeScore}>

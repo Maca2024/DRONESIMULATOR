@@ -7,6 +7,7 @@
  * - Aerodynamic drag
  * - Gravity
  * - Ground effect
+ * - Wind effects with Perlin noise gusts
  */
 
 import type { Vector3, Quaternion, DroneConfig, NormalizedInput } from '@shared/types';
@@ -18,6 +19,19 @@ export interface PhysicsState {
   rotation: Quaternion;
   angularVelocity: Vector3;
   motorRPM: [number, number, number, number];
+}
+
+export interface WindConfig {
+  enabled: boolean;
+  baseDirection: Vector3; // Normalized direction
+  baseSpeed: number; // m/s
+  gustStrength: number; // Multiplier for gusts (0-1)
+  gustFrequency: number; // How often gusts occur
+}
+
+export interface WindState {
+  currentWind: Vector3; // Current wind velocity vector
+  gustPhase: number; // Current gust animation phase
 }
 
 export interface PhysicsConfig {
@@ -44,14 +58,32 @@ const DEFAULT_CONFIG: PhysicsConfig = {
   momentOfInertia: { x: 0.005, y: 0.005, z: 0.009 },
 };
 
+const DEFAULT_WIND_CONFIG: WindConfig = {
+  enabled: true,
+  baseDirection: { x: 1, y: 0, z: 0.3 }, // Mostly from east with slight north component
+  baseSpeed: 3, // 3 m/s base wind
+  gustStrength: 0.5, // Gusts add up to 50% more wind
+  gustFrequency: 0.3, // Moderate gust frequency
+};
+
 export class PhysicsEngine {
   private config: PhysicsConfig;
   private state: PhysicsState;
   private groundLevel: number = 0;
 
-  constructor(config: Partial<PhysicsConfig> = {}) {
+  // Wind system
+  private windConfig: WindConfig;
+  private windState: WindState;
+  private windTime: number = 0;
+
+  constructor(config: Partial<PhysicsConfig> = {}, windConfig: Partial<WindConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.windConfig = { ...DEFAULT_WIND_CONFIG, ...windConfig };
     this.state = this.createInitialState();
+    this.windState = {
+      currentWind: { x: 0, y: 0, z: 0 },
+      gustPhase: Math.random() * Math.PI * 2, // Random start phase
+    };
   }
 
   private createInitialState(): PhysicsState {
@@ -79,6 +111,27 @@ export class PhysicsEngine {
    */
   getState(): PhysicsState {
     return { ...this.state };
+  }
+
+  /**
+   * Get current wind state for HUD display
+   */
+  getWindState(): WindState {
+    return { ...this.windState };
+  }
+
+  /**
+   * Set wind configuration
+   */
+  setWindConfig(config: Partial<WindConfig>): void {
+    this.windConfig = { ...this.windConfig, ...config };
+  }
+
+  /**
+   * Get wind configuration
+   */
+  getWindConfig(): WindConfig {
+    return { ...this.windConfig };
   }
 
   /**
@@ -118,11 +171,15 @@ export class PhysicsEngine {
     const groundEffectMultiplier = this.calculateGroundEffect();
     thrustWorld.y *= groundEffectMultiplier;
 
+    // Update and apply wind
+    this.updateWind(dt);
+    const windForce = this.calculateWindForce();
+
     // Sum forces
     const totalForce: Vector3 = {
-      x: thrustWorld.x + gravity.x + drag.x,
-      y: thrustWorld.y + gravity.y + drag.y,
-      z: thrustWorld.z + gravity.z + drag.z,
+      x: thrustWorld.x + gravity.x + drag.x + windForce.x,
+      y: thrustWorld.y + gravity.y + drag.y + windForce.y,
+      z: thrustWorld.z + gravity.z + drag.z + windForce.z,
     };
 
     // Calculate acceleration (F = ma)
@@ -304,6 +361,114 @@ export class PhysicsEngine {
     // Ground effect increases thrust by up to 30% when very close to ground
     const effectStrength = 1 - heightAboveGround / (rotorDiameter * 2);
     return 1 + effectStrength * 0.3;
+  }
+
+  /**
+   * Simplified Perlin-like noise function for wind gusts
+   */
+  private noise(t: number): number {
+    // Multi-octave noise approximation using sine waves
+    return (
+      Math.sin(t * 0.7) * 0.5 +
+      Math.sin(t * 1.3 + 1.5) * 0.3 +
+      Math.sin(t * 2.1 + 3.0) * 0.2
+    );
+  }
+
+  /**
+   * Update wind state with Perlin-like gusts
+   */
+  private updateWind(dt: number): void {
+    if (!this.windConfig.enabled) {
+      this.windState.currentWind = { x: 0, y: 0, z: 0 };
+      return;
+    }
+
+    this.windTime += dt;
+
+    // Calculate gust multiplier using noise
+    const gustNoise = this.noise(this.windTime * this.windConfig.gustFrequency);
+    const gustMultiplier = 1 + gustNoise * this.windConfig.gustStrength;
+
+    // Normalize base direction
+    const dirLen = Math.sqrt(
+      this.windConfig.baseDirection.x ** 2 +
+      this.windConfig.baseDirection.y ** 2 +
+      this.windConfig.baseDirection.z ** 2
+    );
+    const normDir = {
+      x: this.windConfig.baseDirection.x / (dirLen || 1),
+      y: this.windConfig.baseDirection.y / (dirLen || 1),
+      z: this.windConfig.baseDirection.z / (dirLen || 1),
+    };
+
+    // Add slight direction variation with gusts
+    const dirVariation = this.noise(this.windTime * 0.5 + 100) * 0.2;
+
+    // Calculate current wind velocity
+    const speed = this.windConfig.baseSpeed * gustMultiplier;
+    this.windState.currentWind = {
+      x: normDir.x * speed + dirVariation * speed * 0.3,
+      y: normDir.y * speed + this.noise(this.windTime * 0.3) * 0.5, // Slight vertical turbulence
+      z: normDir.z * speed + dirVariation * speed * 0.3,
+    };
+
+    this.windState.gustPhase = gustMultiplier;
+  }
+
+  /**
+   * Calculate wind force on drone
+   * Wind affects drone based on its orientation (more surface area = more force)
+   */
+  private calculateWindForce(): Vector3 {
+    if (!this.windConfig.enabled) {
+      return { x: 0, y: 0, z: 0 };
+    }
+
+    const { currentWind } = this.windState;
+
+    // Relative wind (wind minus drone velocity)
+    const relativeWind = {
+      x: currentWind.x - this.state.velocity.x,
+      y: currentWind.y - this.state.velocity.y,
+      z: currentWind.z - this.state.velocity.z,
+    };
+
+    // Calculate wind speed
+    const windSpeed = Math.sqrt(
+      relativeWind.x ** 2 + relativeWind.y ** 2 + relativeWind.z ** 2
+    );
+
+    if (windSpeed < 0.1) {
+      return { x: 0, y: 0, z: 0 };
+    }
+
+    // Get drone orientation effect (more force when tilted into wind)
+    // Calculate how much the drone's "flat" side faces the wind
+    const droneUp = this.rotateVector({ x: 0, y: 1, z: 0 }, this.state.rotation);
+
+    // Wind direction normalized
+    const windDir = {
+      x: relativeWind.x / windSpeed,
+      y: relativeWind.y / windSpeed,
+      z: relativeWind.z / windSpeed,
+    };
+
+    // Cross product gives perpendicular component (how much flat side faces wind)
+    const crossProduct = Math.abs(
+      droneUp.x * windDir.x + droneUp.y * windDir.y + droneUp.z * windDir.z
+    );
+    const effectiveArea = 0.02 + 0.03 * (1 - crossProduct); // Base area + tilt bonus
+
+    // Wind force = 0.5 * Cd * rho * A * v^2
+    const Cd = 1.2; // Drag coefficient for flat plate
+    const forceMagnitude = 0.5 * Cd * PHYSICS.AIR_DENSITY * effectiveArea * windSpeed * windSpeed;
+
+    return {
+      x: windDir.x * forceMagnitude,
+      y: windDir.y * forceMagnitude,
+      z: windDir.z * forceMagnitude,
+    };
   }
 
   /**

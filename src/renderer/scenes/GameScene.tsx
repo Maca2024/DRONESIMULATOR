@@ -23,6 +23,7 @@ export function GameScene(): JSX.Element {
   const isPaused = useGameStore((state) => state.isPaused);
   const currentScreen = useGameStore((state) => state.currentScreen);
   const tick = useGameStore((state) => state.tick);
+  const updateWind = useGameStore((state) => state.updateWind);
   const droneState = useGameStore((state) => state.drone);
   const updateInput = useInputStore((state) => state.update);
 
@@ -92,6 +93,12 @@ export function GameScene(): JSX.Element {
 
       // Update camera based on current mode
       cameraController.update(physicsState.position, euler, dt);
+
+      // Update wind state for HUD
+      updateWind({
+        speed: result.wind.speed,
+        direction: result.wind.direction,
+      });
 
       // Update state for effects
       setDronePosition(new THREE.Vector3(

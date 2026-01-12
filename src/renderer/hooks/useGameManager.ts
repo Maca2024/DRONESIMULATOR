@@ -35,6 +35,11 @@ export interface UpdateResult {
     motorRPM: [number, number, number, number];
   };
   euler: { roll: number; pitch: number; yaw: number };
+  wind: {
+    currentWind: Vector3;
+    speed: number;
+    direction: number; // degrees from north
+  };
 }
 
 export interface GameManagerState {
@@ -165,9 +170,26 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         mission.current.recordCrash();
       }
 
+      // Get wind state for HUD
+      const windState = physics.current.getWindState();
+      const windSpeed = Math.sqrt(
+        windState.currentWind.x ** 2 +
+        windState.currentWind.y ** 2 +
+        windState.currentWind.z ** 2
+      );
+      // Calculate wind direction in degrees (0 = North, 90 = East)
+      const windDirection = windSpeed > 0.1
+        ? (Math.atan2(windState.currentWind.x, windState.currentWind.z) * 180 / Math.PI + 360) % 360
+        : 0;
+
       return {
         physicsState,
         euler: physics.current.getEulerAngles(),
+        wind: {
+          currentWind: windState.currentWind,
+          speed: windSpeed,
+          direction: windDirection,
+        },
       };
     },
     [getInput, updateDrone, addScore, crash, droneIsArmed]

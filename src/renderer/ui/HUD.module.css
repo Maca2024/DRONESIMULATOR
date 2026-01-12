@@ -132,6 +132,20 @@
   }
 }
 
+/* Wind indicator */
+.windIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.windArrow {
+  display: inline-block;
+  font-size: 1.2rem;
+  color: #88ccff;
+  transition: transform 0.3s ease;
+}
+
 /* Throttle */
 .throttleContainer {
   position: absolute;

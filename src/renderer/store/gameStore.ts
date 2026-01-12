@@ -7,6 +7,12 @@ import type {
   Vector3,
 } from '@shared/types';
 
+interface WindState {
+  speed: number; // m/s
+  direction: number; // degrees from north (0-360)
+  enabled: boolean;
+}
+
 interface GameState {
   // Screen state
   currentScreen: GameScreen;
@@ -19,6 +25,9 @@ interface GameState {
 
   // Drone state
   drone: DroneState;
+
+  // Wind state
+  wind: WindState;
 
   // Mission state
   currentMission: Mission | null;
@@ -34,6 +43,7 @@ interface GameState {
   resumeGame: () => void;
   endGame: () => void;
   updateDrone: (state: Partial<DroneState>) => void;
+  updateWind: (wind: Partial<WindState>) => void;
   setFlightMode: (mode: FlightMode) => void;
   toggleArm: () => void;
   addScore: (points: number) => void;
@@ -62,6 +72,7 @@ export const useGameStore = create<GameState>((set) => ({
   isPaused: false,
   gameTime: 0,
   drone: { ...initialDroneState },
+  wind: { speed: 0, direction: 0, enabled: true },
   currentMission: null,
   missionTime: 0,
   score: 0,
@@ -119,6 +130,12 @@ export const useGameStore = create<GameState>((set) => ({
   updateDrone: (droneState) =>
     set((state) => ({
       drone: { ...state.drone, ...droneState },
+    })),
+
+  // Wind controls
+  updateWind: (windUpdate) =>
+    set((state) => ({
+      wind: { ...state.wind, ...windUpdate },
     })),
 
   setFlightMode: (mode) =>

@@ -30,7 +30,8 @@
         "Wind affects drone differently based on orientation and surface area"
       ],
       "priority": "high",
-      "passes": false
+      "passes": true,
+      "notes": "Implemented in PhysicsEngine.ts - WindConfig with baseSpeed/gustStrength/gustFrequency, Perlin-like noise for gusts, wind force based on drone orientation, HUD indicator with rotating arrow and m/s display"
     },
     {
       "id": "US003",
