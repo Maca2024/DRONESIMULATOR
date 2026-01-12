@@ -61,7 +61,8 @@
         "Recording indicator on HUD when active"
       ],
       "priority": "medium",
-      "passes": false
+      "passes": false,
+      "notes": "FlightRecorder.ts system created with full recording/playback/storage functionality - needs UI integration (pause menu controls, HUD indicator)"
     },
     {
       "id": "US005",

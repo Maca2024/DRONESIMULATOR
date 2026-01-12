@@ -264,3 +264,45 @@ Yaw:   P=45, I=80, D=0
 
 ---
 
+### January 12, 2026 - Iteration 6: US004 Flight Recording System (Partial) 🔄
+**Feature In Progress:** Flight Recording & Replay System
+
+**Changes Made:**
+1. `src/renderer/systems/FlightRecorder.ts` (NEW):
+   - FlightFrame interface (timestamp, position, rotation, motorRPM, velocity, input)
+   - FlightRecording interface with metadata (dronePreset, weather, maxAltitude, maxSpeed)
+   - Recording methods: startRecording(), stopRecording(), recordFrame()
+   - Playback methods: loadRecording(), startPlayback(), pausePlayback(), seekTo()
+   - Interpolated playback with SLERP for smooth quaternion transitions
+   - Storage methods: saveRecording(), loadAllRecordings(), deleteRecording()
+   - localStorage persistence with MAX_RECORDINGS limit (10)
+   - 60fps frame recording rate
+
+2. `src/renderer/ui/HUD.module.css`:
+   - Added telemetryHint styles
+   - Added recordingIndicator styles (pulse animation, red dot, time display)
+
+**System Capabilities:**
+- Records position, rotation, motor RPMs, velocity, inputs at 60fps
+- Binary search for efficient playback frame lookup
+- Spherical interpolation (SLERP) for smooth rotation playback
+- Variable playback speed (0.25x to 4x)
+- Auto-loop playback
+- localStorage persistence
+
+**Remaining for US004:**
+- Integrate FlightRecorder into pause menu (start/stop buttons)
+- Add recording indicator to HUD component
+- Create ghost drone 3D component for replay visualization
+
+**Tests:** All 53 tests passing
+**TypeCheck:** Clean
+**Lint:** Pre-existing warnings only
+
+**Next Iteration Suggestions:**
+- Complete US004 UI integration
+- US012 - Motor Sound Enhancement (MEDIUM, immersion)
+- US009 - Gamepad Vibration Feedback (LOW)
+
+---
+

@@ -291,6 +291,11 @@ export function HUD(): JSX.Element {
         <div className={styles.crosshairH} />
         <div className={styles.crosshairV} />
       </div>
+
+      {/* Telemetry toggle hint */}
+      <div className={styles.telemetryHint}>
+        Press T to {showTelemetry ? 'hide' : 'show'} telemetry
+      </div>
     </div>
   );
 }
