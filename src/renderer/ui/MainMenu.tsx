@@ -89,6 +89,11 @@ export function MainMenu(): JSX.Element {
               <span className={styles.buttonText}>Missions</span>
             </button>
 
+            <button className={styles.menuButton} onClick={() => setScreen('replays')}>
+              <span className={styles.buttonIcon}>📹</span>
+              <span className={styles.buttonText}>Replays</span>
+            </button>
+
             <button className={styles.menuButton} onClick={handleSettings}>
               <span className={styles.buttonIcon}>⚙️</span>
               <span className={styles.buttonText}>Settings</span>

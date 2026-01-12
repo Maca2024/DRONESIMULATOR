@@ -12,6 +12,7 @@ import { LoadingScreen } from './ui/LoadingScreen';
 import { TutorialOverlay } from './ui/TutorialOverlay';
 import { MissionHUD } from './ui/MissionHUD';
 import { DroneSelectionScreen } from './ui/DroneSelectionScreen';
+import { ReplaysScreen } from './ui/ReplaysScreen';
 import { ControlsHint } from './ui/ControlsHint';
 import { TutorialSystem } from './systems/TutorialSystem';
 import { MissionSystem } from './systems/MissionSystem';
@@ -101,7 +102,7 @@ function App(): JSX.Element {
           }}
         >
           <Suspense fallback={null}>
-            {currentScreen !== 'mainMenu' && currentScreen !== 'settings' && currentScreen !== 'droneSelect' && <GameScene />}
+            {currentScreen !== 'mainMenu' && currentScreen !== 'settings' && currentScreen !== 'droneSelect' && currentScreen !== 'replays' && <GameScene />}
           </Suspense>
         </Canvas>
       </div>
@@ -112,6 +113,7 @@ function App(): JSX.Element {
           {currentScreen === 'mainMenu' && <MainMenu />}
           {currentScreen === 'settings' && <SettingsPanel />}
           {currentScreen === 'droneSelect' && <DroneSelectionScreen />}
+          {currentScreen === 'replays' && <ReplaysScreen />}
           {currentScreen === 'pause' && <PauseMenu />}
           {isPlayingScreen && <HUD />}
 

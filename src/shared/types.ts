@@ -88,7 +88,7 @@ export interface DroneState {
 // GAME TYPES
 // ============================================================================
 
-export type GameScreen = 'mainMenu' | 'settings' | 'tutorial' | 'freePlay' | 'mission' | 'pause' | 'droneSelect';
+export type GameScreen = 'mainMenu' | 'settings' | 'tutorial' | 'freePlay' | 'mission' | 'pause' | 'droneSelect' | 'replays';
 
 export type DronePresetId = 'BEGINNER' | 'INTERMEDIATE' | 'RACING' | 'FREESTYLE';
 
