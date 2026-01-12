@@ -74,6 +74,64 @@
   font-weight: 600;
 }
 
+/* Battery indicator */
+.batteryContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.batteryIndicator {
+  width: 60px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.batteryFill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 1px;
+}
+
+.batteryValue {
+  font-size: 1rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.batteryLow {
+  animation: batteryPulse 1s ease-in-out infinite;
+}
+
+.batteryCritical {
+  animation: batteryCriticalPulse 0.5s ease-in-out infinite;
+}
+
+@keyframes batteryPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes batteryCriticalPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.05);
+  }
+}
+
 /* Throttle */
 .throttleContainer {
   position: absolute;

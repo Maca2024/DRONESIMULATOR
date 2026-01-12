@@ -57,6 +57,17 @@ export function HUD(): JSX.Element {
     drone.velocity.x ** 2 + drone.velocity.y ** 2 + drone.velocity.z ** 2
   ).toFixed(1);
 
+  // Battery status calculations
+  const batteryPercent = Math.round(drone.batteryLevel);
+  const isLowBattery = batteryPercent <= 20;
+  const isCriticalBattery = batteryPercent <= 5;
+  const getBatteryColor = (): string => {
+    if (isCriticalBattery) return '#ff4444';
+    if (isLowBattery) return '#ffaa00';
+    if (batteryPercent <= 50) return '#ffdd00';
+    return '#00ff88';
+  };
+
   return (
     <div className={styles.hud}>
       {/* Top bar */}
@@ -91,9 +102,23 @@ export function HUD(): JSX.Element {
             <span className={styles.label}>FPS</span>
             <span className={styles.value}>{fps}</span>
           </div>
-          <div className={styles.statItem}>
+          <div className={`${styles.batteryContainer} ${isLowBattery ? styles.batteryLow : ''} ${isCriticalBattery ? styles.batteryCritical : ''}`}>
             <span className={styles.label}>BAT</span>
-            <span className={styles.value}>{Math.round(drone.batteryLevel)}%</span>
+            <div className={styles.batteryIndicator}>
+              <div
+                className={styles.batteryFill}
+                style={{
+                  width: `${batteryPercent}%`,
+                  backgroundColor: getBatteryColor()
+                }}
+              />
+            </div>
+            <span
+              className={styles.batteryValue}
+              style={{ color: getBatteryColor() }}
+            >
+              {batteryPercent}%
+            </span>
           </div>
         </div>
       </div>

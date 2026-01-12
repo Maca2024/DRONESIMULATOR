@@ -1,6 +1,7 @@
 {
   "project": "Aetherwing Drone Simulator",
-  "description": "User stories for expanding the drone simulator",
+  "description": "User stories for expanding the drone simulator based on AETHER_FORGE roadmap",
+  "phase": "Phase 1 - Core Engine & Gameplay",
   "stories": [
     {
       "id": "US001",
@@ -8,23 +9,25 @@
       "description": "Drone should have a battery that drains over time during flight",
       "acceptance_criteria": [
         "Battery starts at 100%",
-        "Battery drains based on throttle usage",
-        "HUD displays battery percentage",
-        "Warning when battery below 20%",
-        "Drone loses power when battery reaches 0%"
+        "Battery drains based on throttle usage (higher throttle = faster drain)",
+        "HUD displays battery percentage with visual indicator",
+        "Warning when battery below 20% (flashing indicator + audio)",
+        "Drone loses power gradually when battery reaches 0%"
       ],
       "priority": "high",
-      "passes": false
+      "passes": true,
+      "notes": "Implemented in useGameManager.ts - battery drain based on throttle, HUD indicator with color coding, low battery audio warning, power reduction at critical levels"
     },
     {
       "id": "US002",
       "title": "Wind Effects",
-      "description": "Add environmental wind that affects drone flight",
+      "description": "Add environmental wind that affects drone flight physics",
       "acceptance_criteria": [
-        "Wind force applied to drone physics",
+        "Wind force vector applied to drone physics engine",
+        "Wind uses Perlin noise for realistic gusts",
         "Wind direction and strength configurable in settings",
-        "Visual indicator of wind on HUD",
-        "Wind affects drone differently based on orientation"
+        "Visual wind indicator on HUD (arrow + m/s)",
+        "Wind affects drone differently based on orientation and surface area"
       ],
       "priority": "high",
       "passes": false
@@ -41,34 +44,38 @@
         "Option to respawn after crash"
       ],
       "priority": "high",
-      "passes": false
+      "passes": true,
+      "notes": "Already implemented in PhysicsEngine.ts - ground collision, crash detection at >5 m/s impact"
     },
     {
       "id": "US004",
-      "title": "Flight Recording",
-      "description": "Record and playback flight sessions",
+      "title": "Flight Recording & Replay",
+      "description": "Record and playback flight sessions with telemetry",
       "acceptance_criteria": [
-        "Record button in UI to start recording",
-        "Stop button to end recording",
-        "Save recording to local storage",
-        "Load and playback recorded flights",
-        "Display recording indicator on HUD"
+        "Record button in pause menu to start/stop recording",
+        "Records: position, rotation, motor RPMs, inputs, timestamps",
+        "Save recording to IndexedDB/localStorage",
+        "Replay mode with play/pause/speed controls",
+        "Ghost drone visualization during replay",
+        "Recording indicator on HUD when active"
       ],
       "priority": "medium",
       "passes": false
     },
     {
       "id": "US005",
-      "title": "Multiple Drone Models",
-      "description": "Support different drone models with varying characteristics",
+      "title": "Drone Selection UI",
+      "description": "UI to select different drone presets before flight",
       "acceptance_criteria": [
-        "At least 3 different drone models selectable",
-        "Each model has different weight, thrust, and agility",
-        "Visual model changes based on selection",
-        "Drone selection screen before flight"
+        "Drone selection screen accessible from main menu",
+        "Shows 4 presets: BEGINNER, INTERMEDIATE, RACING, FREESTYLE",
+        "Display stats comparison (weight, thrust, agility, max speed)",
+        "3D preview of selected drone",
+        "Selected drone used in next flight session"
       ],
       "priority": "medium",
-      "passes": false
+      "passes": false,
+      "notes": "Drone presets already exist in constants.ts, need UI selector"
     },
     {
       "id": "US006",
@@ -82,21 +89,25 @@
         "Visual and audio feedback when passing checkpoint"
       ],
       "priority": "medium",
-      "passes": false
+      "passes": true,
+      "notes": "Already implemented in MissionSystem.ts - TIME_TRIAL mission type with checkpoints"
     },
     {
       "id": "US007",
-      "title": "Telemetry Display",
-      "description": "Show detailed flight telemetry data",
+      "title": "Enhanced Telemetry Display",
+      "description": "Show detailed flight telemetry data on HUD",
       "acceptance_criteria": [
-        "Display altitude in meters",
-        "Display speed in m/s",
-        "Display GPS-style coordinates",
-        "Display pitch, roll, yaw angles",
-        "Toggleable via settings or hotkey"
+        "Display altitude in meters (barometric style)",
+        "Display speed in m/s with velocity vector",
+        "Display artificial horizon (pitch/roll visualization)",
+        "Display heading/yaw as compass",
+        "Display motor RPMs (4 indicators)",
+        "Display G-force indicator",
+        "Toggleable via T hotkey"
       ],
-      "priority": "low",
-      "passes": false
+      "priority": "medium",
+      "passes": false,
+      "notes": "Basic HUD exists, needs Betaflight-style OSD enhancement"
     },
     {
       "id": "US008",
@@ -110,35 +121,69 @@
         "Drone lights turn on automatically at night"
       ],
       "priority": "low",
-      "passes": false
+      "passes": true,
+      "notes": "Already implemented in Environment.tsx - timeOfDay system with dawn/day/dusk/night"
     },
     {
       "id": "US009",
       "title": "Gamepad Vibration Feedback",
       "description": "Haptic feedback for gamepad controllers",
       "acceptance_criteria": [
-        "Vibration on crash",
-        "Vibration intensity based on throttle",
-        "Vibration on low battery warning",
-        "Vibration on checkpoint pass",
+        "Vibration on crash (strong pulse)",
+        "Vibration intensity based on throttle (subtle rumble)",
+        "Vibration on low battery warning (pattern)",
+        "Vibration on checkpoint pass (short pulse)",
         "Vibration toggleable in settings"
+      ],
+      "priority": "low",
+      "passes": false,
+      "notes": "Gamepad API support exists in inputStore, needs vibration implementation"
+    },
+    {
+      "id": "US010",
+      "title": "Mini-map",
+      "description": "Display a small map showing drone position and objectives",
+      "acceptance_criteria": [
+        "Mini-map in corner of screen (configurable position)",
+        "Shows drone position and heading arrow",
+        "Shows checkpoints/objectives if in mission mode",
+        "Shows terrain heightmap or simplified view",
+        "Zoomable with +/- keys",
+        "Toggleable via M hotkey"
       ],
       "priority": "low",
       "passes": false
     },
     {
-      "id": "US010",
-      "title": "Mini-map",
-      "description": "Display a small map showing drone position",
+      "id": "US011",
+      "title": "PID Controller System",
+      "description": "Implement cascade PID loops for realistic flight stabilization",
       "acceptance_criteria": [
-        "Mini-map in corner of screen",
-        "Shows drone position and orientation",
-        "Shows checkpoints if in time trial mode",
-        "Zoomable with hotkey",
-        "Toggleable via settings"
+        "Rate PID loop (inner loop) for angular velocity control",
+        "Attitude PID loop (outer loop) for angle control",
+        "Anti-windup protection on integrators",
+        "Configurable PID gains per axis (P, I, D for roll/pitch/yaw)",
+        "PID values editable in settings",
+        "Betaflight-compatible PID defaults"
       ],
-      "priority": "low",
-      "passes": false
+      "priority": "high",
+      "passes": false,
+      "notes": "Critical for realistic flight feel - currently direct motor mapping without PID stabilization"
+    },
+    {
+      "id": "US012",
+      "title": "Motor Sound Enhancement",
+      "description": "Realistic motor audio based on RPM",
+      "acceptance_criteria": [
+        "Each motor has independent sound source",
+        "Sound pitch varies with motor RPM",
+        "Sound volume varies with throttle",
+        "Doppler effect when drone moves relative to camera",
+        "Different sound profiles per drone type"
+      ],
+      "priority": "medium",
+      "passes": false,
+      "notes": "EnhancedAudioSystem exists, needs motor-specific implementation"
     }
   ]
 }

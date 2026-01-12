@@ -17,6 +17,15 @@ import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
 import type { TutorialLevel, Vector3 } from '@shared/types';
 
+// Battery configuration
+const BATTERY_CONFIG = {
+  capacity: 100, // percentage
+  baseDrainRate: 0.02, // % per second at idle
+  throttleDrainMultiplier: 0.15, // additional % per second at full throttle
+  lowBatteryThreshold: 20, // % - warning threshold
+  criticalBatteryThreshold: 5, // % - critical warning
+};
+
 export interface UpdateResult {
   physicsState: {
     position: Vector3;
@@ -48,10 +57,15 @@ export function useGameManager(): GameManagerState & GameManagerActions {
   const tutorial = useRef(new TutorialSystem());
   const mission = useRef(new MissionSystem());
 
+  // Battery state
+  const batteryLevel = useRef(BATTERY_CONFIG.capacity);
+  const lastLowBatteryWarning = useRef(0);
+
   const updateDrone = useGameStore((state) => state.updateDrone);
   const addScore = useGameStore((state) => state.addScore);
   const crash = useGameStore((state) => state.crash);
   const getInput = useInputStore((state) => state.getInput);
+  const droneIsArmed = useGameStore((state) => state.drone.isArmed);
 
   // Initialize audio on first interaction
   const initAudio = useCallback(() => {
@@ -63,23 +77,55 @@ export function useGameManager(): GameManagerState & GameManagerActions {
     (dt: number) => {
       const input = getInput();
 
+      // Calculate battery drain based on throttle (only when armed)
+      if (droneIsArmed && batteryLevel.current > 0) {
+        const throttleFactor = input.throttle;
+        const drainRate =
+          BATTERY_CONFIG.baseDrainRate +
+          throttleFactor * BATTERY_CONFIG.throttleDrainMultiplier;
+        batteryLevel.current = Math.max(0, batteryLevel.current - drainRate * dt);
+
+        // Low battery warning (play every 5 seconds when below threshold)
+        const now = Date.now();
+        if (
+          batteryLevel.current <= BATTERY_CONFIG.lowBatteryThreshold &&
+          now - lastLowBatteryWarning.current > 5000
+        ) {
+          audioSystem.playEffect('lowBattery');
+          lastLowBatteryWarning.current = now;
+        }
+      }
+
+      // Apply power reduction when battery is critically low
+      const powerMultiplier =
+        batteryLevel.current <= BATTERY_CONFIG.criticalBatteryThreshold
+          ? batteryLevel.current / BATTERY_CONFIG.criticalBatteryThreshold
+          : 1;
+
+      // Modify input based on power level
+      const adjustedInput = {
+        ...input,
+        throttle: input.throttle * powerMultiplier,
+      };
+
       // Run physics at higher frequency for stability
       const physicsSteps = 4;
       const physicsStep = dt / physicsSteps;
       for (let i = 0; i < physicsSteps; i++) {
-        physics.current.update(input, physicsStep);
+        physics.current.update(adjustedInput, physicsStep);
       }
 
       // Get physics state
       const physicsState = physics.current.getState();
 
-      // Update drone state in store
+      // Update drone state in store (including battery level)
       updateDrone({
         position: physicsState.position,
         velocity: physicsState.velocity,
         rotation: physicsState.rotation,
         angularVelocity: physicsState.angularVelocity,
         motorRPM: physicsState.motorRPM,
+        batteryLevel: batteryLevel.current,
       });
 
       // Update audio motor sounds
@@ -89,7 +135,7 @@ export function useGameManager(): GameManagerState & GameManagerActions {
       const tutorialProgress = tutorial.current.getProgress();
       if (tutorialProgress.currentTaskIndex >= 0) {
         tutorial.current.update(
-          { ...physicsState, batteryLevel: 100, isArmed: true, flightMode: 'angle' },
+          { ...physicsState, batteryLevel: batteryLevel.current, isArmed: droneIsArmed, flightMode: 'angle' },
           input,
           dt
         );
@@ -100,7 +146,7 @@ export function useGameManager(): GameManagerState & GameManagerActions {
       if (missionState && !missionState.isComplete) {
         const prevCompleted = missionState.objectivesCompleted;
         mission.current.update(
-          { ...physicsState, batteryLevel: 100, isArmed: true, flightMode: 'angle' },
+          { ...physicsState, batteryLevel: batteryLevel.current, isArmed: droneIsArmed, flightMode: 'angle' },
           dt
         );
 
@@ -124,12 +170,14 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         euler: physics.current.getEulerAngles(),
       };
     },
-    [getInput, updateDrone, addScore, crash]
+    [getInput, updateDrone, addScore, crash, droneIsArmed]
   );
 
-  // Reset physics
+  // Reset physics and battery
   const reset = useCallback((position?: { x: number; y: number; z: number }) => {
     physics.current.reset(position);
+    batteryLevel.current = BATTERY_CONFIG.capacity;
+    lastLowBatteryWarning.current = 0;
   }, []);
 
   // Start tutorial level

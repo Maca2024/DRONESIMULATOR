@@ -5,27 +5,105 @@
 
 ## Project Overview
 - Project: Aetherwing Drone Simulator
-- Tech Stack: React, TypeScript, Three.js (@react-three/fiber), Zustand, Vite
-- Key Commands:
-  - npm run dev        - Start development server
-  - npm run typecheck  - Check TypeScript types
-  - npm run test       - Run tests
-  - npm run lint       - Run ESLint
-  - npm run quality    - Run all checks (typecheck + lint + test)
+- Tech Stack: React 18, TypeScript, Three.js (@react-three/fiber), Zustand, Vite, Tone.js
+- Target: Professional-grade FPV drone simulator (VelociDrone-level realism)
+
+## Key Commands
+- npm run dev        - Start development server (localhost:5173)
+- npm run typecheck  - Check TypeScript types
+- npm run test       - Run Vitest tests
+- npm run lint       - Run ESLint
+- npm run quality    - Run all checks (typecheck + lint + format + test)
+- npm run build      - Production build
 
 ## Codebase Structure
-- src/renderer/core/    - Physics engine
-- src/renderer/scenes/  - Game scene and drone components
-- src/renderer/ui/      - UI components (HUD, menus, overlays)
-- src/renderer/store/   - Zustand stores (settings, input, progress)
-- src/renderer/audio/   - Audio system
-- src/renderer/components/ - 3D components (terrain, environment, drone model)
-- src/shared/           - Shared types and constants
+```
+src/
+├── renderer/
+│   ├── core/PhysicsEngine.ts     - 6-DoF physics, quaternions, motors
+│   ├── scenes/GameScene.tsx      - Main game loop (useFrame)
+│   ├── components/               - DroneModel, Terrain, Environment, Effects
+│   ├── ui/                       - HUD, Menus, Settings, Overlays
+│   ├── systems/                  - TutorialSystem, MissionSystem
+│   ├── store/                    - Zustand stores (game, input, settings, progress)
+│   ├── hooks/                    - useCameraController, useGameManager
+│   └── audio/EnhancedAudioSystem.ts
+└── shared/                       - Types & constants (DRONE_PRESETS, etc.)
+```
 
-## Initial Notes
-- Sprint started: Ready to implement new features
-- All PRD items start with passes: false
-- Focus on one feature per iteration
+## AETHER_FORGE Roadmap Integration
+Based on competitive analysis of VelociDrone, Liftoff XR, and DRL Simulator.
+
+### Phase 1 Priority (Current Sprint)
+1. **US011 - PID Controller System** (HIGH) - Critical for realistic flight
+2. **US001 - Battery System** (HIGH) - Gameplay depth
+3. **US002 - Wind Effects** (HIGH) - Environmental realism
+
+### Already Completed
+- US003 - Crash Detection ✅ (PhysicsEngine.ts)
+- US006 - Time Trial Mode ✅ (MissionSystem.ts)
+- US008 - Day/Night Cycle ✅ (Environment.tsx)
+
+### Physics Architecture Notes
+- Current: Direct input → motor RPM mapping
+- Target: Cascade PID loops (Position → Attitude → Rate → Motors)
+- Integration: Runge-Kutta 4th order @ 200Hz (0.005s timestep)
+- State vector: position[3], velocity[3], quaternion[4], angularVelocity[3]
+
+### Betaflight PID Defaults (Reference)
+```
+Roll:  P=45, I=80, D=40
+Pitch: P=47, I=84, D=46
+Yaw:   P=45, I=80, D=0
+```
+
+---
+
+## Sprint Log
+
+### January 12, 2026 - Sprint Initialization
+- Initialized Ralph Loop for autonomous development
+- Updated PRD with 12 user stories (9 TODO, 3 DONE)
+- Prioritized: PID Controller, Battery System, Wind Effects
+- Codebase analysis complete: ~6500 lines existing code
+- Ready to begin first feature implementation
+
+---
+
+### January 12, 2026 - Iteration 1: US001 Battery System ✅
+**Feature Completed:** Battery System
+
+**Changes Made:**
+1. `src/renderer/hooks/useGameManager.ts`:
+   - Added BATTERY_CONFIG with drain rates and thresholds
+   - Battery drains based on throttle (baseDrainRate + throttle * multiplier)
+   - Power reduction when battery critically low (<5%)
+   - Low battery audio warning every 5 seconds when <20%
+   - Battery resets on game/mission reset
+
+2. `src/renderer/ui/HUD.tsx`:
+   - Added battery status calculations with color coding
+   - Green (>50%), Yellow (20-50%), Orange (<20%), Red (<5%)
+   - Visual battery bar indicator
+   - Pulsing animation for low/critical battery
+
+3. `src/renderer/ui/HUD.module.css`:
+   - Added batteryContainer, batteryIndicator, batteryFill styles
+   - Added batteryLow and batteryCritical animations
+   - Smooth transitions for battery color changes
+
+4. `src/renderer/systems/AudioSystem.ts`:
+   - Added generateLowBatteryWarning() - three quick beeps
+   - Registered 'lowBattery' effect in sound effects map
+
+**Tests:** All 36 tests passing
+**TypeCheck:** Clean
+**Lint:** Pre-existing warnings only (Three.js properties)
+
+**Next Iteration Suggestions:**
+- US002 - Wind Effects (HIGH priority, environmental realism)
+- US011 - PID Controller System (HIGH priority, flight feel)
+- US005 - Drone Selection UI (MEDIUM, good UX improvement)
 
 ---
 

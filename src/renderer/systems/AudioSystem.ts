@@ -176,6 +176,47 @@ export class AudioSystem {
 
     // Generate fail sound
     this.effectBuffers.set('fail', this.generateFailSound());
+
+    // Generate low battery warning
+    this.effectBuffers.set('lowBattery', this.generateLowBatteryWarning());
+  }
+
+  /**
+   * Generate low battery warning beeps
+   */
+  private generateLowBatteryWarning(): AudioBuffer {
+    if (!this.context) throw new Error('Audio context not initialized');
+
+    const sampleRate = this.context.sampleRate;
+    const duration = 0.6;
+    const length = sampleRate * duration;
+    const buffer = this.context.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Three quick beeps
+    const beepDuration = 0.08;
+    const beepGap = 0.12;
+    const frequency = 1200;
+
+    for (let i = 0; i < length; i++) {
+      const t = i / sampleRate;
+      let sample = 0;
+
+      for (let beep = 0; beep < 3; beep++) {
+        const beepStart = beep * beepGap;
+        const beepEnd = beepStart + beepDuration;
+
+        if (t >= beepStart && t < beepEnd) {
+          const beepT = t - beepStart;
+          const envelope = Math.sin((beepT / beepDuration) * Math.PI);
+          sample = Math.sin(2 * Math.PI * frequency * beepT) * envelope * 0.4;
+        }
+      }
+
+      data[i] = sample;
+    }
+
+    return buffer;
   }
 
   /**
