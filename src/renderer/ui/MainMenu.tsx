@@ -43,6 +43,10 @@ export function MainMenu(): JSX.Element {
     setScreen('settings');
   };
 
+  const handleSelectDrone = (): void => {
+    setScreen('droneSelect');
+  };
+
   const tutorialLevels: TutorialLevel[] = ['novice', 'beginner', 'intermediate', 'advanced', 'expert'];
   const missions = missionSystem.getAllMissions();
 
@@ -68,6 +72,11 @@ export function MainMenu(): JSX.Element {
             <button className={styles.menuButton} onClick={handleFreePlay}>
               <span className={styles.buttonIcon}>🚁</span>
               <span className={styles.buttonText}>Free Flight</span>
+            </button>
+
+            <button className={styles.menuButton} onClick={handleSelectDrone}>
+              <span className={styles.buttonIcon}>🎛️</span>
+              <span className={styles.buttonText}>Select Drone</span>
             </button>
 
             <button className={styles.menuButton} onClick={() => setActiveSubmenu('tutorial')}>

@@ -5,6 +5,7 @@ import type {
   Mission,
   FlightMode,
   Vector3,
+  DronePresetId,
 } from '@shared/types';
 
 interface WindState {
@@ -25,6 +26,7 @@ interface GameState {
 
   // Drone state
   drone: DroneState;
+  selectedDronePreset: DronePresetId;
 
   // Wind state
   wind: WindState;
@@ -44,6 +46,7 @@ interface GameState {
   endGame: () => void;
   updateDrone: (state: Partial<DroneState>) => void;
   updateWind: (wind: Partial<WindState>) => void;
+  setDronePreset: (preset: DronePresetId) => void;
   setFlightMode: (mode: FlightMode) => void;
   toggleArm: () => void;
   addScore: (points: number) => void;
@@ -72,6 +75,7 @@ export const useGameStore = create<GameState>((set) => ({
   isPaused: false,
   gameTime: 0,
   drone: { ...initialDroneState },
+  selectedDronePreset: 'BEGINNER',
   wind: { speed: 0, direction: 0, enabled: true },
   currentMission: null,
   missionTime: 0,
@@ -137,6 +141,9 @@ export const useGameStore = create<GameState>((set) => ({
     set((state) => ({
       wind: { ...state.wind, ...windUpdate },
     })),
+
+  // Drone preset selection
+  setDronePreset: (preset) => set({ selectedDronePreset: preset }),
 
   setFlightMode: (mode) =>
     set((state) => ({

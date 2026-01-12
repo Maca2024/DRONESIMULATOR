@@ -186,3 +186,43 @@ Yaw:   P=45, I=80, D=0
 
 ---
 
+### January 12, 2026 - Iteration 4: US005 Drone Selection UI ✅
+**Feature Completed:** Drone Selection Screen
+
+**Changes Made:**
+1. `src/shared/types.ts`:
+   - Added 'droneSelect' to GameScreen type
+   - Added DronePresetId type
+
+2. `src/renderer/store/gameStore.ts`:
+   - Added selectedDronePreset state (default: 'BEGINNER')
+   - Added setDronePreset action
+
+3. `src/renderer/ui/DroneSelectionScreen.tsx` (NEW):
+   - Full drone selection UI with 4 preset cards
+   - Stat bars (Weight, Power, Agility, Speed) with color coding
+   - Preview section with detailed specifications
+   - Navigation to free flight mode
+
+4. `src/renderer/ui/DroneSelectionScreen.module.css` (NEW):
+   - Complete styling with gradients, animations, hover effects
+   - Responsive breakpoints for tablet and mobile
+
+5. `src/renderer/ui/MainMenu.tsx`:
+   - Added "Select Drone" button with navigation
+
+6. `src/renderer/App.tsx`:
+   - Added DroneSelectionScreen to screen routing
+   - Excluded droneSelect from GameScene rendering
+
+**Tests:** All 53 tests passing
+**TypeCheck:** Clean
+**Lint:** Pre-existing warnings only
+
+**Next Iteration Suggestions:**
+- US007 - Enhanced Telemetry Display (MEDIUM, Betaflight-style OSD)
+- US004 - Flight Recording & Replay (MEDIUM, training feature)
+- US012 - Motor Sound Enhancement (MEDIUM, immersion)
+
+---
+

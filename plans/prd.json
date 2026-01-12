@@ -75,8 +75,8 @@
         "Selected drone used in next flight session"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": "Drone presets already exist in constants.ts, need UI selector"
+      "passes": true,
+      "notes": "Implemented DroneSelectionScreen.tsx with preset cards, stat bars, detailed specs, integrated into App.tsx and MainMenu.tsx, added selectedDronePreset to gameStore"
     },
     {
       "id": "US006",
