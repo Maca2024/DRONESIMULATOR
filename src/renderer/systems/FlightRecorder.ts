@@ -8,7 +8,14 @@
  * - Ghost drone visualization support
  */
 
-import type { Vector3, Quaternion, NormalizedInput } from '@shared/types';
+import type { Vector3, Quaternion } from '@shared/types';
+
+export interface FlightInput {
+  throttle: number;
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
 
 export interface FlightFrame {
   timestamp: number; // ms from start
@@ -124,7 +131,7 @@ export class FlightRecorder {
     rotation: Quaternion,
     motorRPM: [number, number, number, number],
     velocity: Vector3,
-    input: NormalizedInput
+    input: FlightInput
   ): void {
     if (!this.isRecording) return;
 
@@ -474,3 +481,6 @@ export class FlightRecorder {
     localStorage.removeItem(STORAGE_KEY);
   }
 }
+
+// Singleton instance
+export const flightRecorder = new FlightRecorder();

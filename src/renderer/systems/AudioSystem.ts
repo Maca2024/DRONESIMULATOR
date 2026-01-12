@@ -16,6 +16,50 @@ export interface AudioConfig {
   monoAudio: boolean;
 }
 
+export interface MotorSoundProfile {
+  baseFrequency: number;
+  maxFrequency: number;
+  oscillatorType: OscillatorType;
+  filterQ: number;
+  noiseLevel: number;
+  harmonics: number[];
+}
+
+export const MOTOR_SOUND_PROFILES: Record<string, MotorSoundProfile> = {
+  BEGINNER: {
+    baseFrequency: 80,
+    maxFrequency: 600,
+    oscillatorType: 'sine',
+    filterQ: 0.5,
+    noiseLevel: 0.03,
+    harmonics: [1, 0.3],
+  },
+  INTERMEDIATE: {
+    baseFrequency: 100,
+    maxFrequency: 700,
+    oscillatorType: 'sawtooth',
+    filterQ: 1,
+    noiseLevel: 0.05,
+    harmonics: [1, 0.4, 0.2],
+  },
+  RACING: {
+    baseFrequency: 120,
+    maxFrequency: 900,
+    oscillatorType: 'sawtooth',
+    filterQ: 2,
+    noiseLevel: 0.08,
+    harmonics: [1, 0.5, 0.3, 0.1],
+  },
+  FREESTYLE: {
+    baseFrequency: 100,
+    maxFrequency: 800,
+    oscillatorType: 'sawtooth',
+    filterQ: 1.5,
+    noiseLevel: 0.06,
+    harmonics: [1, 0.45, 0.25],
+  },
+};
+
 export class AudioSystem {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -26,6 +70,13 @@ export class AudioSystem {
   private motorOscillators: OscillatorNode[] = [];
   private motorGains: GainNode[] = [];
   private motorFilters: BiquadFilterNode[] = [];
+  private harmonicOscillators: OscillatorNode[][] = [];
+
+  // Current sound profile
+  private currentProfile: MotorSoundProfile = MOTOR_SOUND_PROFILES.BEGINNER;
+
+  // Spatial audio state
+  private listenerPosition = { x: 0, y: 5, z: 10 }; // Default camera position
 
   // Effect sounds
   private effectBuffers: Map<string, AudioBuffer> = new Map();
@@ -78,23 +129,25 @@ export class AudioSystem {
   }
 
   /**
-   * Initialize procedural motor sounds
+   * Initialize procedural motor sounds with profile-based synthesis
    */
   private initializeMotorSounds(): void {
     if (!this.context || !this.effectsGain) return;
 
+    const profile = this.currentProfile;
+
     // Create 4 motor sound sources (one per motor)
     for (let i = 0; i < 4; i++) {
-      // Create oscillator for base frequency
+      // Create main oscillator for base frequency
       const osc = this.context.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = 100; // Base frequency
+      osc.type = profile.oscillatorType;
+      osc.frequency.value = profile.baseFrequency;
 
       // Create filter for motor character
       const filter = this.context.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.value = 2000;
-      filter.Q.value = 1;
+      filter.Q.value = profile.filterQ;
 
       // Create gain for individual motor volume
       const gain = this.context.createGain();
@@ -110,6 +163,24 @@ export class AudioSystem {
       this.motorOscillators.push(osc);
       this.motorFilters.push(filter);
       this.motorGains.push(gain);
+
+      // Create harmonic oscillators for richer sound
+      const harmonics: OscillatorNode[] = [];
+      for (let h = 1; h < profile.harmonics.length; h++) {
+        const harmOsc = this.context.createOscillator();
+        harmOsc.type = profile.oscillatorType;
+        harmOsc.frequency.value = profile.baseFrequency * (h + 1);
+
+        const harmGain = this.context.createGain();
+        harmGain.gain.value = 0;
+
+        harmOsc.connect(harmGain);
+        harmGain.connect(filter);
+        harmOsc.start();
+
+        harmonics.push(harmOsc);
+      }
+      this.harmonicOscillators.push(harmonics);
     }
 
     // Add noise for motor texture
@@ -337,37 +408,133 @@ export class AudioSystem {
   }
 
   /**
-   * Update motor sounds based on RPM
+   * Update motor sounds based on RPM with Doppler effect
    */
-  updateMotorSounds(motorRPMs: [number, number, number, number]): void {
+  updateMotorSounds(
+    motorRPMs: [number, number, number, number],
+    dronePosition?: { x: number; y: number; z: number },
+    droneVelocity?: { x: number; y: number; z: number }
+  ): void {
     if (!this.isInitialized || this.isMuted) return;
+
+    const profile = this.currentProfile;
+    const currentTime = this.context?.currentTime ?? 0;
+
+    // Calculate Doppler shift if position/velocity provided
+    let dopplerFactor = 1;
+    if (dronePosition && droneVelocity) {
+      dopplerFactor = this.calculateDopplerFactor(dronePosition, droneVelocity);
+    }
 
     for (let i = 0; i < 4; i++) {
       const rpm = motorRPMs[i];
       const normalizedRPM = rpm / 25000; // Normalize to 0-1
 
-      // Update frequency (100Hz - 800Hz based on RPM)
-      const freq = 100 + normalizedRPM * 700;
+      // Calculate base frequency from profile with Doppler shift
+      const freqRange = profile.maxFrequency - profile.baseFrequency;
+      const baseFreq = (profile.baseFrequency + normalizedRPM * freqRange) * dopplerFactor;
+
       this.motorOscillators[i]?.frequency.setTargetAtTime(
-        freq,
-        this.context?.currentTime ?? 0,
+        baseFreq,
+        currentTime,
         0.01
       );
+
+      // Update harmonic frequencies
+      const harmonics = this.harmonicOscillators[i];
+      if (harmonics) {
+        for (let h = 0; h < harmonics.length; h++) {
+          const harmFreq = baseFreq * (h + 2);
+          harmonics[h]?.frequency.setTargetAtTime(harmFreq, currentTime, 0.01);
+        }
+      }
 
       // Update filter (opens up with higher RPM)
       this.motorFilters[i]?.frequency.setTargetAtTime(
         500 + normalizedRPM * 3000,
-        this.context?.currentTime ?? 0,
+        currentTime,
         0.01
       );
 
-      // Update volume (louder with higher RPM)
-      const volume = normalizedRPM * 0.15;
+      // Update volume (louder with higher RPM, distance attenuation)
+      let volume = normalizedRPM * 0.15;
+      if (dronePosition) {
+        const distance = this.calculateDistance(dronePosition);
+        // Simple distance attenuation (1/distance^2, clamped)
+        const attenuation = Math.min(1, 100 / (distance * distance + 10));
+        volume *= attenuation;
+      }
+
       this.motorGains[i]?.gain.setTargetAtTime(
         volume,
-        this.context?.currentTime ?? 0,
+        currentTime,
         0.01
       );
+    }
+  }
+
+  /**
+   * Calculate Doppler shift factor based on relative velocity
+   */
+  private calculateDopplerFactor(
+    dronePosition: { x: number; y: number; z: number },
+    droneVelocity: { x: number; y: number; z: number }
+  ): number {
+    const speedOfSound = 343; // m/s
+
+    // Direction from drone to listener
+    const dx = this.listenerPosition.x - dronePosition.x;
+    const dy = this.listenerPosition.y - dronePosition.y;
+    const dz = this.listenerPosition.z - dronePosition.z;
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    if (distance < 0.1) return 1;
+
+    // Normalize direction
+    const nx = dx / distance;
+    const ny = dy / distance;
+    const nz = dz / distance;
+
+    // Radial velocity (positive = moving towards listener)
+    const radialVelocity = -(droneVelocity.x * nx + droneVelocity.y * ny + droneVelocity.z * nz);
+
+    // Doppler factor: f' = f * (c / (c - v_radial))
+    // Clamped to prevent extreme values
+    const factor = speedOfSound / (speedOfSound - Math.max(-100, Math.min(100, radialVelocity)));
+    return Math.max(0.5, Math.min(2, factor));
+  }
+
+  /**
+   * Calculate distance from drone to listener
+   */
+  private calculateDistance(dronePosition: { x: number; y: number; z: number }): number {
+    const dx = this.listenerPosition.x - dronePosition.x;
+    const dy = this.listenerPosition.y - dronePosition.y;
+    const dz = this.listenerPosition.z - dronePosition.z;
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+  }
+
+  /**
+   * Update listener position (camera position)
+   */
+  setListenerPosition(position: { x: number; y: number; z: number }): void {
+    this.listenerPosition = { ...position };
+  }
+
+  /**
+   * Set drone sound profile
+   */
+  setDroneProfile(presetId: string): void {
+    const profile = MOTOR_SOUND_PROFILES[presetId];
+    if (profile) {
+      this.currentProfile = profile;
+      // Update oscillator types if already initialized
+      if (this.isInitialized) {
+        for (let i = 0; i < this.motorOscillators.length; i++) {
+          this.motorOscillators[i].type = profile.oscillatorType;
+          this.motorFilters[i].Q.value = profile.filterQ;
+        }
+      }
     }
   }
 
@@ -433,8 +600,21 @@ export class AudioSystem {
    */
   dispose(): void {
     this.motorOscillators.forEach((osc) => osc.stop());
+    this.harmonicOscillators.forEach((harmonics) => {
+      harmonics.forEach((osc) => osc.stop());
+    });
     void this.context?.close();
     this.isInitialized = false;
+  }
+
+  /**
+   * Get current profile name for display
+   */
+  getCurrentProfileName(): string {
+    for (const [name, profile] of Object.entries(MOTOR_SOUND_PROFILES)) {
+      if (profile === this.currentProfile) return name;
+    }
+    return 'UNKNOWN';
   }
 }
 

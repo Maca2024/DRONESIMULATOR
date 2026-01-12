@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
+import { flightRecorder } from '../systems/FlightRecorder';
 import styles from './HUD.module.css';
 
 function getCompassDirection(heading: number): string {
@@ -22,13 +23,17 @@ export function HUD(): JSX.Element {
   const score = useGameStore((state) => state.score);
   const missionTime = useGameStore((state) => state.missionTime);
   const comboMultiplier = useGameStore((state) => state.comboMultiplier);
+  const selectedDronePreset = useGameStore((state) => state.selectedDronePreset);
   const input = useInputStore((state) => state.input);
   const pauseGame = useGameStore((state) => state.pauseGame);
 
   const [fps, setFps] = useState(60);
   const [showTelemetry, setShowTelemetry] = useState(true);
   const [gForce, setGForce] = useState(1);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const lastVelocity = useRef({ x: 0, y: 0, z: 0 });
+  const recordingStartTime = useRef(0);
 
   // FPS counter
   useEffect(() => {
@@ -50,6 +55,26 @@ export function HUD(): JSX.Element {
     return () => cancelAnimationFrame(animId);
   }, []);
 
+  // Toggle recording
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      const recording = flightRecorder.stopRecording(
+        `Flight_${Date.now()}`,
+        selectedDronePreset
+      );
+      if (recording) {
+        flightRecorder.saveRecording(recording);
+        console.info(`Recording saved: ${recording.name}`);
+      }
+      setIsRecording(false);
+      setRecordingTime(0);
+    } else {
+      flightRecorder.startRecording();
+      recordingStartTime.current = performance.now();
+      setIsRecording(true);
+    }
+  }, [isRecording, selectedDronePreset]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -59,11 +84,14 @@ export function HUD(): JSX.Element {
       if (e.code === 'KeyT') {
         setShowTelemetry((prev) => !prev);
       }
+      if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) {
+        toggleRecording();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pauseGame]);
+  }, [pauseGame, toggleRecording]);
 
   // Calculate G-force from velocity changes
   useEffect(() => {
@@ -81,6 +109,29 @@ export function HUD(): JSX.Element {
 
     lastVelocity.current = { ...drone.velocity };
   }, [drone.velocity]);
+
+  // Record frames and update recording time
+  useEffect(() => {
+    if (!isRecording) return;
+
+    // Record current frame
+    flightRecorder.recordFrame(
+      drone.position,
+      drone.rotation,
+      drone.motorRPM,
+      drone.velocity,
+      {
+        throttle: input.throttle,
+        roll: input.roll,
+        pitch: input.pitch,
+        yaw: input.yaw
+      }
+    );
+
+    // Update recording time
+    const elapsed = (performance.now() - recordingStartTime.current) / 1000;
+    setRecordingTime(elapsed);
+  }, [isRecording, drone.position, drone.rotation, drone.motorRPM, drone.velocity, input]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -286,15 +337,24 @@ export function HUD(): JSX.Element {
         </div>
       </div>
 
+      {/* Recording indicator */}
+      {isRecording && (
+        <div className={styles.recordingIndicator}>
+          <div className={styles.recordingDot} />
+          <span className={styles.recordingText}>REC</span>
+          <span className={styles.recordingTime}>{formatTime(recordingTime)}</span>
+        </div>
+      )}
+
       {/* Crosshair */}
       <div className={styles.crosshair}>
         <div className={styles.crosshairH} />
         <div className={styles.crosshairV} />
       </div>
 
-      {/* Telemetry toggle hint */}
+      {/* Keyboard shortcuts hint */}
       <div className={styles.telemetryHint}>
-        Press T to {showTelemetry ? 'hide' : 'show'} telemetry
+        T: Telemetry | R: {isRecording ? 'Stop' : 'Start'} Recording
       </div>
     </div>
   );
