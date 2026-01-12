@@ -107,8 +107,8 @@
         "Toggleable via T hotkey"
       ],
       "priority": "medium",
-      "passes": false,
-      "notes": "Basic HUD exists, needs Betaflight-style OSD enhancement"
+      "passes": true,
+      "notes": "Implemented telemetry panel with motor RPM bars, compass heading, horizontal/vertical velocity, G-force indicator with color coding, T key toggle"
     },
     {
       "id": "US008",

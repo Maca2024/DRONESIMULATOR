@@ -324,3 +324,132 @@
   left: -1px;
   top: -10px;
 }
+
+/* Compass */
+.compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-sm);
+}
+
+.compassHeading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-accent-primary);
+}
+
+.compassDirection {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+}
+
+/* Enhanced Telemetry Panel */
+.telemetryPanel {
+  position: absolute;
+  left: 50%;
+  bottom: 80px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+}
+
+.telemetryTitle {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: var(--spacing-xs);
+  text-align: center;
+}
+
+/* Motor RPMs */
+.motorRPMs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.motorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.motorIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.motorBar {
+  width: 16px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.motorFill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height 0.1s ease;
+}
+
+.motorLabel {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+}
+
+/* Velocity Info */
+.velocityInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+
+.velocityRow {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--spacing-sm);
+}
+
+.velocityLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.velocityValue {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+/* G-Force Display */
+.gForceDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.gForceValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  transition: color 0.2s ease;
+}

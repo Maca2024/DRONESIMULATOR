@@ -1,7 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
 import styles from './HUD.module.css';
+
+function getCompassDirection(heading: number): string {
+  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const index = Math.round(heading / 45) % 8;
+  return directions[index];
+}
+
+function getGForceColor(g: number): string {
+  if (g > 3) return '#ff4444';
+  if (g > 2) return '#ffaa00';
+  if (g > 1.5) return '#ffdd00';
+  return '#00ff88';
+}
 
 export function HUD(): JSX.Element {
   const drone = useGameStore((state) => state.drone);
@@ -13,6 +26,9 @@ export function HUD(): JSX.Element {
   const pauseGame = useGameStore((state) => state.pauseGame);
 
   const [fps, setFps] = useState(60);
+  const [showTelemetry, setShowTelemetry] = useState(true);
+  const [gForce, setGForce] = useState(1);
+  const lastVelocity = useRef({ x: 0, y: 0, z: 0 });
 
   // FPS counter
   useEffect(() => {
@@ -34,17 +50,37 @@ export function HUD(): JSX.Element {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // Keyboard shortcut for pause
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.code === 'Escape' || e.code === 'KeyP') {
         pauseGame();
+      }
+      if (e.code === 'KeyT') {
+        setShowTelemetry((prev) => !prev);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pauseGame]);
+
+  // Calculate G-force from velocity changes
+  useEffect(() => {
+    const dt = 1 / 60; // Approximate frame time
+    const accelX = (drone.velocity.x - lastVelocity.current.x) / dt;
+    const accelY = (drone.velocity.y - lastVelocity.current.y) / dt;
+    const accelZ = (drone.velocity.z - lastVelocity.current.z) / dt;
+
+    // Total acceleration magnitude (including gravity compensation)
+    const totalAccel = Math.sqrt(accelX ** 2 + (accelY + 9.81) ** 2 + accelZ ** 2);
+    const gForceValue = totalAccel / 9.81;
+
+    // Smooth the G-force reading
+    setGForce((prev) => prev * 0.8 + gForceValue * 0.2);
+
+    lastVelocity.current = { ...drone.velocity };
+  }, [drone.velocity]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -57,6 +93,17 @@ export function HUD(): JSX.Element {
   const speed = Math.sqrt(
     drone.velocity.x ** 2 + drone.velocity.y ** 2 + drone.velocity.z ** 2
   ).toFixed(1);
+  const verticalSpeed = drone.velocity.y.toFixed(1);
+  const horizontalSpeed = Math.sqrt(drone.velocity.x ** 2 + drone.velocity.z ** 2).toFixed(1);
+
+  // Calculate heading from quaternion (simplified: use atan2 of x/z velocity for direction of movement)
+  const heading = Math.round(
+    ((Math.atan2(drone.velocity.x, drone.velocity.z) * 180) / Math.PI + 360) % 360
+  );
+  const compassDirection = getCompassDirection(heading);
+
+  // Motor RPMs normalized for display (0-100%)
+  const motorPercents = drone.motorRPM.map((rpm) => Math.min(100, (rpm / 25000) * 100));
 
   // Battery status calculations
   const batteryPercent = Math.round(drone.batteryLevel);
@@ -166,7 +213,68 @@ export function HUD(): JSX.Element {
           </div>
           <div className={styles.centerMark} />
         </div>
+
+        {/* Compass heading */}
+        <div className={styles.compass}>
+          <span className={styles.compassHeading}>{heading}°</span>
+          <span className={styles.compassDirection}>{compassDirection}</span>
+        </div>
       </div>
+
+      {/* Enhanced Telemetry Panel (toggleable with T) */}
+      {showTelemetry && (
+        <div className={styles.telemetryPanel}>
+          {/* Motor RPMs */}
+          <div className={styles.motorRPMs}>
+            <div className={styles.telemetryTitle}>MOTORS</div>
+            <div className={styles.motorGrid}>
+              {motorPercents.map((percent, i) => (
+                <div key={i} className={styles.motorIndicator}>
+                  <div className={styles.motorBar}>
+                    <div
+                      className={styles.motorFill}
+                      style={{
+                        height: `${percent}%`,
+                        backgroundColor: percent > 90 ? '#ff4444' : percent > 70 ? '#ffaa00' : '#00ff88',
+                      }}
+                    />
+                  </div>
+                  <span className={styles.motorLabel}>M{i + 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Velocity Vector */}
+          <div className={styles.velocityInfo}>
+            <div className={styles.telemetryTitle}>VELOCITY</div>
+            <div className={styles.velocityRow}>
+              <span className={styles.velocityLabel}>H:</span>
+              <span className={styles.velocityValue}>{horizontalSpeed}m/s</span>
+            </div>
+            <div className={styles.velocityRow}>
+              <span className={styles.velocityLabel}>V:</span>
+              <span
+                className={styles.velocityValue}
+                style={{ color: Number(verticalSpeed) < -2 ? '#ff4444' : Number(verticalSpeed) > 2 ? '#00ff88' : '#fff' }}
+              >
+                {Number(verticalSpeed) > 0 ? '+' : ''}{verticalSpeed}m/s
+              </span>
+            </div>
+          </div>
+
+          {/* G-Force */}
+          <div className={styles.gForceDisplay}>
+            <div className={styles.telemetryTitle}>G-FORCE</div>
+            <span
+              className={styles.gForceValue}
+              style={{ color: getGForceColor(gForce) }}
+            >
+              {gForce.toFixed(1)}G
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Bottom - Arm status */}
       <div className={styles.bottomBar}>

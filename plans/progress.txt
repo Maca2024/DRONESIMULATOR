@@ -226,3 +226,41 @@ Yaw:   P=45, I=80, D=0
 
 ---
 
+### January 12, 2026 - Iteration 5: US007 Enhanced Telemetry Display ✅
+**Feature Completed:** Betaflight-style OSD Telemetry
+
+**Changes Made:**
+1. `src/renderer/ui/HUD.tsx`:
+   - Added showTelemetry state with T key toggle
+   - Added G-force calculation from velocity changes
+   - Added compass heading and direction calculation
+   - Added horizontal/vertical velocity split
+   - Added motor RPM percentage display
+   - Added telemetry panel with motors, velocity, G-force sections
+   - Helper functions: getCompassDirection(), getGForceColor()
+
+2. `src/renderer/ui/HUD.module.css`:
+   - Added compass styles (heading, direction)
+   - Added telemetryPanel container
+   - Added motorRPMs with 2x2 grid of vertical bars
+   - Added velocityInfo with H/V breakdown
+   - Added gForceDisplay with color transitions
+
+**Telemetry Features:**
+- Motor RPMs: 4 vertical bars showing M1-M4 power (color coded: green/yellow/red)
+- Velocity: Horizontal (m/s) and Vertical (+/-m/s) with descent warning
+- G-Force: Real-time display with color coding (green 1G, yellow 1.5G, orange 2G, red 3G+)
+- Compass: Heading in degrees with cardinal direction
+- Toggle: Press T to show/hide telemetry panel
+
+**Tests:** All 53 tests passing
+**TypeCheck:** Clean
+**Lint:** Pre-existing warnings only
+
+**Next Iteration Suggestions:**
+- US004 - Flight Recording & Replay (MEDIUM, training feature)
+- US012 - Motor Sound Enhancement (MEDIUM, immersion)
+- US009 - Gamepad Vibration Feedback (LOW)
+
+---
+
