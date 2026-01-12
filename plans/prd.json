@@ -1,0 +1,144 @@
+{
+  "project": "Aetherwing Drone Simulator",
+  "description": "User stories for expanding the drone simulator",
+  "stories": [
+    {
+      "id": "US001",
+      "title": "Battery System",
+      "description": "Drone should have a battery that drains over time during flight",
+      "acceptance_criteria": [
+        "Battery starts at 100%",
+        "Battery drains based on throttle usage",
+        "HUD displays battery percentage",
+        "Warning when battery below 20%",
+        "Drone loses power when battery reaches 0%"
+      ],
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "US002",
+      "title": "Wind Effects",
+      "description": "Add environmental wind that affects drone flight",
+      "acceptance_criteria": [
+        "Wind force applied to drone physics",
+        "Wind direction and strength configurable in settings",
+        "Visual indicator of wind on HUD",
+        "Wind affects drone differently based on orientation"
+      ],
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "US003",
+      "title": "Crash Detection",
+      "description": "Detect when drone crashes into obstacles or ground",
+      "acceptance_criteria": [
+        "Collision detection with terrain",
+        "Collision detection with obstacles",
+        "Crash triggers visual feedback (screen shake, particle effect)",
+        "Crash triggers audio feedback",
+        "Option to respawn after crash"
+      ],
+      "priority": "high",
+      "passes": false
+    },
+    {
+      "id": "US004",
+      "title": "Flight Recording",
+      "description": "Record and playback flight sessions",
+      "acceptance_criteria": [
+        "Record button in UI to start recording",
+        "Stop button to end recording",
+        "Save recording to local storage",
+        "Load and playback recorded flights",
+        "Display recording indicator on HUD"
+      ],
+      "priority": "medium",
+      "passes": false
+    },
+    {
+      "id": "US005",
+      "title": "Multiple Drone Models",
+      "description": "Support different drone models with varying characteristics",
+      "acceptance_criteria": [
+        "At least 3 different drone models selectable",
+        "Each model has different weight, thrust, and agility",
+        "Visual model changes based on selection",
+        "Drone selection screen before flight"
+      ],
+      "priority": "medium",
+      "passes": false
+    },
+    {
+      "id": "US006",
+      "title": "Time Trial Mode",
+      "description": "Race against the clock through checkpoints",
+      "acceptance_criteria": [
+        "Checkpoint gates placed in environment",
+        "Timer starts when passing first checkpoint",
+        "Timer stops when passing final checkpoint",
+        "Display current time and best time",
+        "Visual and audio feedback when passing checkpoint"
+      ],
+      "priority": "medium",
+      "passes": false
+    },
+    {
+      "id": "US007",
+      "title": "Telemetry Display",
+      "description": "Show detailed flight telemetry data",
+      "acceptance_criteria": [
+        "Display altitude in meters",
+        "Display speed in m/s",
+        "Display GPS-style coordinates",
+        "Display pitch, roll, yaw angles",
+        "Toggleable via settings or hotkey"
+      ],
+      "priority": "low",
+      "passes": false
+    },
+    {
+      "id": "US008",
+      "title": "Day/Night Cycle",
+      "description": "Dynamic lighting that changes time of day",
+      "acceptance_criteria": [
+        "Sun position changes over time",
+        "Lighting color temperature changes",
+        "Option to set specific time of day",
+        "Stars visible at night",
+        "Drone lights turn on automatically at night"
+      ],
+      "priority": "low",
+      "passes": false
+    },
+    {
+      "id": "US009",
+      "title": "Gamepad Vibration Feedback",
+      "description": "Haptic feedback for gamepad controllers",
+      "acceptance_criteria": [
+        "Vibration on crash",
+        "Vibration intensity based on throttle",
+        "Vibration on low battery warning",
+        "Vibration on checkpoint pass",
+        "Vibration toggleable in settings"
+      ],
+      "priority": "low",
+      "passes": false
+    },
+    {
+      "id": "US010",
+      "title": "Mini-map",
+      "description": "Display a small map showing drone position",
+      "acceptance_criteria": [
+        "Mini-map in corner of screen",
+        "Shows drone position and orientation",
+        "Shows checkpoints if in time trial mode",
+        "Zoomable with hotkey",
+        "Toggleable via settings"
+      ],
+      "priority": "low",
+      "passes": false
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+# Ralph Loop Progress Log
+# ======================
+# This file tracks progress across Ralph loop iterations.
+# Append new entries at the bottom - do not overwrite existing content.
+
+## Project Overview
+- Project: Aetherwing Drone Simulator
+- Tech Stack: React, TypeScript, Three.js (@react-three/fiber), Zustand, Vite
+- Key Commands:
+  - npm run dev        - Start development server
+  - npm run typecheck  - Check TypeScript types
+  - npm run test       - Run tests
+  - npm run lint       - Run ESLint
+  - npm run quality    - Run all checks (typecheck + lint + test)
+
+## Codebase Structure
+- src/renderer/core/    - Physics engine
+- src/renderer/scenes/  - Game scene and drone components
+- src/renderer/ui/      - UI components (HUD, menus, overlays)
+- src/renderer/store/   - Zustand stores (settings, input, progress)
+- src/renderer/audio/   - Audio system
+- src/renderer/components/ - 3D components (terrain, environment, drone model)
+- src/shared/           - Shared types and constants
+
+## Initial Notes
+- Sprint started: Ready to implement new features
+- All PRD items start with passes: false
+- Focus on one feature per iteration
+
+---
+
