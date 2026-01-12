@@ -10,8 +10,9 @@
  * - Wind effects with Perlin noise gusts
  */
 
-import type { Vector3, Quaternion, DroneConfig, NormalizedInput } from '@shared/types';
+import type { Vector3, Quaternion, DroneConfig, NormalizedInput, FlightMode } from '@shared/types';
 import { PHYSICS } from '@shared/constants';
+import { FlightController, type PIDGains } from './PIDController';
 
 export interface PhysicsState {
   position: Vector3;
@@ -76,6 +77,11 @@ export class PhysicsEngine {
   private windState: WindState;
   private windTime: number = 0;
 
+  // Flight controller (PID system)
+  private flightController: FlightController;
+  private flightMode: FlightMode = 'angle';
+  private pidEnabled: boolean = true;
+
   constructor(config: Partial<PhysicsConfig> = {}, windConfig: Partial<WindConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.windConfig = { ...DEFAULT_WIND_CONFIG, ...windConfig };
@@ -84,6 +90,7 @@ export class PhysicsEngine {
       currentWind: { x: 0, y: 0, z: 0 },
       gustPhase: Math.random() * Math.PI * 2, // Random start phase
     };
+    this.flightController = new FlightController();
   }
 
   private createInitialState(): PhysicsState {
@@ -104,6 +111,84 @@ export class PhysicsEngine {
     if (position) {
       this.state.position = { ...position };
     }
+    // Reset flight controller PIDs
+    this.flightController.reset();
+  }
+
+  /**
+   * Set flight mode (angle or acro)
+   */
+  setFlightMode(mode: FlightMode): void {
+    if (this.flightMode !== mode) {
+      this.flightMode = mode;
+      this.flightController.reset(); // Reset PIDs on mode change
+    }
+  }
+
+  /**
+   * Get current flight mode
+   */
+  getFlightMode(): FlightMode {
+    return this.flightMode;
+  }
+
+  /**
+   * Enable/disable PID controller
+   */
+  setPIDEnabled(enabled: boolean): void {
+    this.pidEnabled = enabled;
+    if (enabled) {
+      this.flightController.reset();
+    }
+  }
+
+  /**
+   * Check if PID is enabled
+   */
+  isPIDEnabled(): boolean {
+    return this.pidEnabled;
+  }
+
+  /**
+   * Get rate PID gains
+   */
+  getRatePIDGains(): { roll: PIDGains; pitch: PIDGains; yaw: PIDGains } {
+    return this.flightController.getRatePIDGains();
+  }
+
+  /**
+   * Set rate PID gains for an axis
+   */
+  setRatePIDGains(axis: 'roll' | 'pitch' | 'yaw', gains: Partial<PIDGains>): void {
+    this.flightController.setRatePIDGains(axis, gains);
+  }
+
+  /**
+   * Get attitude PID gains
+   */
+  getAttitudePIDGains(): { roll: PIDGains; pitch: PIDGains; yaw: PIDGains } {
+    return this.flightController.getAttitudePIDGains();
+  }
+
+  /**
+   * Set attitude PID gains for an axis
+   */
+  setAttitudePIDGains(axis: 'roll' | 'pitch' | 'yaw', gains: Partial<PIDGains>): void {
+    this.flightController.setAttitudePIDGains(axis, gains);
+  }
+
+  /**
+   * Set max rates for flight controller
+   */
+  setMaxRates(rates: { roll?: number; pitch?: number; yaw?: number }): void {
+    this.flightController.setMaxRates(rates);
+  }
+
+  /**
+   * Set max angle for angle mode
+   */
+  setMaxAngle(angle: number): void {
+    this.flightController.setMaxAngle(angle);
   }
 
   /**
@@ -144,8 +229,10 @@ export class PhysicsEngine {
     // Apply drone config rates if provided
     const rates = droneConfig?.rates ?? { roll: 400, pitch: 400, yaw: 300 };
 
-    // Calculate target motor RPMs based on input
-    const targetRPMs = this.calculateMotorRPMs(input, rates);
+    // Calculate target motor RPMs based on input (with PID if enabled)
+    const targetRPMs = this.pidEnabled
+      ? this.calculateMotorRPMsWithPID(input, dt)
+      : this.calculateMotorRPMs(input, rates);
 
     // Smooth motor response (motors can't change RPM instantly)
     const motorResponseRate = 10; // How fast motors respond
@@ -265,6 +352,73 @@ export class PhysicsEngine {
     const motor2 = baseRPM + pitchDiff - rollDiff - yawDiff;
     const motor3 = baseRPM - pitchDiff + rollDiff - yawDiff;
     const motor4 = baseRPM - pitchDiff - rollDiff + yawDiff;
+
+    // Clamp to valid range
+    return [
+      Math.max(minRPM, Math.min(maxRPM, motor1)),
+      Math.max(minRPM, Math.min(maxRPM, motor2)),
+      Math.max(minRPM, Math.min(maxRPM, motor3)),
+      Math.max(minRPM, Math.min(maxRPM, motor4)),
+    ];
+  }
+
+  /**
+   * Calculate motor RPMs using PID flight controller
+   * This provides stabilization in both angle and acro modes
+   */
+  private calculateMotorRPMsWithPID(
+    input: NormalizedInput,
+    dt: number
+  ): [number, number, number, number] {
+    const { throttle } = input;
+    const { maxRPM, minRPM } = this.config;
+
+    // Get current attitude (Euler angles in degrees)
+    const currentAttitude = this.getEulerAngles();
+
+    // Get current angular rates (convert from rad/s to deg/s)
+    const currentRates = {
+      roll: this.state.angularVelocity.z * (180 / Math.PI),
+      pitch: this.state.angularVelocity.x * (180 / Math.PI),
+      yaw: this.state.angularVelocity.y * (180 / Math.PI),
+    };
+
+    // Prepare input for flight controller
+    const controlInput = {
+      roll: input.roll,
+      pitch: input.pitch,
+      yaw: input.yaw,
+    };
+
+    // Get motor mix commands from flight controller
+    let pidOutput;
+    if (this.flightMode === 'angle') {
+      pidOutput = this.flightController.updateAngleMode(
+        controlInput,
+        currentAttitude,
+        currentRates,
+        dt
+      );
+    } else {
+      // acro mode
+      pidOutput = this.flightController.updateAcroMode(controlInput, currentRates, dt);
+    }
+
+    // Base throttle RPM
+    const baseRPM = minRPM + throttle * (maxRPM - minRPM);
+
+    // Motor mix with PID output
+    // Motor layout (top view, X config):
+    //   1 (CW)  2 (CCW)
+    //      \  /
+    //       \/
+    //       /\
+    //      /  \
+    //   4 (CCW) 3 (CW)
+    const motor1 = baseRPM + pidOutput.pitch + pidOutput.roll + pidOutput.yaw;
+    const motor2 = baseRPM + pidOutput.pitch - pidOutput.roll - pidOutput.yaw;
+    const motor3 = baseRPM - pidOutput.pitch + pidOutput.roll - pidOutput.yaw;
+    const motor4 = baseRPM - pidOutput.pitch - pidOutput.roll + pidOutput.yaw;
 
     // Clamp to valid range
     return [

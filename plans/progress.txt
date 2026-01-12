@@ -146,3 +146,43 @@ Yaw:   P=45, I=80, D=0
 
 ---
 
+### January 12, 2026 - Iteration 3: US011 PID Controller System ✅
+**Feature Completed:** Cascade PID Flight Controller
+
+**Changes Made:**
+1. `src/renderer/core/PIDController.ts` (NEW):
+   - PIDController class with P, I, D terms
+   - Anti-windup protection on integrators
+   - Derivative low-pass filter to reduce noise
+   - Configurable gains and output limits
+   - FlightController class for cascade control
+   - Angle mode (self-leveling) with outer attitude PID + inner rate PID
+   - Acro mode (rate mode) with inner rate PID only
+   - Betaflight-compatible default PID gains
+   - Methods: setRatePIDGains, setAttitudePIDGains, setMaxRates, setMaxAngle
+
+2. `src/renderer/core/PhysicsEngine.ts`:
+   - Added FlightController integration
+   - Added pidEnabled flag to toggle PID system
+   - Added calculateMotorRPMsWithPID() using FlightController
+   - Added setFlightMode(), getFlightMode()
+   - Added setPIDEnabled(), isPIDEnabled()
+   - Added get/set methods for PID gains
+   - PID resets on mode change and physics reset
+
+3. `src/renderer/core/PIDController.test.ts` (NEW):
+   - 17 unit tests for PIDController and FlightController
+   - Tests for P, I, D terms, anti-windup, reset, negative errors
+   - Tests for angle mode and acro mode stabilization
+
+**Tests:** All 53 tests passing
+**TypeCheck:** Clean
+**Lint:** Pre-existing warnings only
+
+**Next Iteration Suggestions:**
+- US005 - Drone Selection UI (MEDIUM, UX improvement)
+- US007 - Enhanced Telemetry Display (MEDIUM, Betaflight-style OSD)
+- US004 - Flight Recording & Replay (MEDIUM, training feature)
+
+---
+
