@@ -75,6 +75,15 @@ export const useInputStore = create<InputState>((set, get) => ({
   keyBindings: { ...DEFAULT_KEY_BINDINGS },
 
   initialize: () => {
+    // Prevent double initialization
+    if ((window as Window & { __inputInitialized?: boolean }).__inputInitialized) {
+      console.log('InputStore: Already initialized, skipping...');
+      return;
+    }
+    (window as Window & { __inputInitialized?: boolean }).__inputInitialized = true;
+
+    console.log('InputStore: Initializing input handlers...');
+
     // Keyboard events
     const handleKeyDown = (e: KeyboardEvent): void => {
       const state = get();
@@ -88,6 +97,11 @@ export const useInputStore = create<InputState>((set, get) => ({
           value: INPUT.TAP_INPUT_PERCENT,
         });
         set({ keys: newKeys, activeSource: 'keyboard' });
+
+        // Debug log for game keys
+        if (isGameKey(e.code, state.keyBindings)) {
+          console.log(`InputStore: Key pressed: ${e.code}`);
+        }
       }
 
       // Prevent default for game keys
@@ -109,9 +123,10 @@ export const useInputStore = create<InputState>((set, get) => ({
 
     // Mouse events
     const handleMouseMove = (e: MouseEvent): void => {
+      // Only update position, don't change activeSource on mouse move
+      // This prevents mouse movement from disabling keyboard controls
       set({
         mousePosition: { x: e.clientX, y: e.clientY },
-        activeSource: 'mouse',
       });
     };
 
@@ -170,15 +185,19 @@ export const useInputStore = create<InputState>((set, get) => ({
       console.info(`Gamepad disconnected: ${e.gamepad.id}`);
     };
 
-    // Register events
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // Register events on both window and document for maximum compatibility
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener('keyup', handleKeyUp, { capture: true });
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    document.addEventListener('keyup', handleKeyUp, { capture: true });
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
+
+    console.log('InputStore: Event listeners registered on window and document');
 
     // Store cleanup function
     const cleanup = (): void => {
@@ -299,7 +318,11 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
   let aux2 = 0;
   let aux3 = 0;
 
-  if (activeSource === 'keyboard') {
+  // Always check keyboard input first - keyboard should always work regardless of activeSource
+  // This fixes the bug where mouse movement would disable keyboard controls
+  const hasKeyboardInput = Array.from(keys.values()).some(k => k.pressed || k.value > 0);
+
+  if (hasKeyboardInput || activeSource === 'keyboard') {
     // Calculate from keyboard
     const thrustUp = getKeyValue(keys, keyBindings.thrustUp);
     const thrustDown = getKeyValue(keys, keyBindings.thrustDown);

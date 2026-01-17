@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { MissionSystem } from '../systems/MissionSystem';
+import { audioSystem } from '../systems/AudioSystem';
 import styles from './MainMenu.module.css';
 import type { TutorialLevel, Mission } from '@shared/types';
 import { TUTORIAL_LEVELS } from '@shared/constants';
@@ -8,27 +9,31 @@ import { TUTORIAL_LEVELS } from '@shared/constants';
 // Create mission system instance for menu
 const missionSystem = new MissionSystem();
 
+// Initialize audio on first interaction
+const initAudioOnce = (): void => {
+  audioSystem.initialize();
+  void audioSystem.resume();
+};
+
 export function MainMenu(): JSX.Element {
   const setScreen = useGameStore((state) => state.setScreen);
   const startGame = useGameStore((state) => state.startGame);
-  const toggleArm = useGameStore((state) => state.toggleArm);
 
   const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'tutorial' | 'missions'>('none');
 
   const handleFreePlay = (): void => {
+    initAudioOnce();
     startGame('freePlay');
   };
 
-  // Quick test mode - auto arms drone and starts at hover altitude
+  // Quick test mode - drone is already auto-armed in startGame
   const handleQuickTest = (): void => {
+    initAudioOnce();
     startGame('freePlay');
-    // Auto-arm after a short delay to ensure state is ready
-    setTimeout(() => {
-      toggleArm();
-    }, 100);
   };
 
   const handleTutorialSelect = (level: TutorialLevel): void => {
+    initAudioOnce();
     // Store selected level for tutorial system
     sessionStorage.setItem('tutorialLevel', level);
     startGame('freePlay'); // Uses freePlay screen with tutorial overlay
@@ -36,6 +41,7 @@ export function MainMenu(): JSX.Element {
   };
 
   const handleMissionSelect = (mission: Mission): void => {
+    initAudioOnce();
     startGame('mission', mission);
   };
 
@@ -142,7 +148,7 @@ export function MainMenu(): JSX.Element {
 
         <div className={styles.footer}>
           <p className={styles.version}>v1.0.0</p>
-          <p className={styles.controls}>Press ESC for menu • WASD to fly • SPACE for throttle</p>
+          <p className={styles.controls}>Press ESC for menu • WASD to fly • SPACE/SHIFT for throttle • Q/E to turn</p>
         </div>
       </div>
     </div>

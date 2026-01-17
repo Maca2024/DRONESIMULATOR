@@ -48,6 +48,14 @@ export function GameScene(): JSX.Element {
     scene.fog = weather === 'foggy' ? new THREE.Fog(0xcccccc, 10, 150) : null;
   }, [scene, weather]);
 
+  // Initialize input handlers when game scene mounts
+  const initializeInput = useInputStore((state) => state.initialize);
+
+  useEffect(() => {
+    console.log('GameScene: Initializing input handlers...');
+    initializeInput();
+  }, [initializeInput]);
+
   // Initialize audio on first click
   useEffect(() => {
     const handleInteraction = (): void => {

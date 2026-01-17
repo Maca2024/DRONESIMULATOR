@@ -106,6 +106,33 @@ npm run dev
 
 The application will be available at `http://localhost:5173`
 
+### Troubleshooting
+
+#### WebGL Not Working
+
+If you see a "WebGL Not Available" error:
+
+1. **Enable Hardware Acceleration:**
+   - Chrome/Brave: Go to `chrome://settings/system` → Enable "Use graphics acceleration when available"
+   - Firefox: Go to `about:config` → Set `webgl.force-enabled` to `true`
+
+2. **Update Graphics Drivers:**
+   - Download latest drivers from NVIDIA, AMD, or Intel
+
+3. **Browser Flags (Chrome/Brave):**
+   - Go to `chrome://flags`
+   - Enable "Override software rendering list"
+   - Enable "WebGL Draft Extensions"
+   - Click "Relaunch"
+
+4. **Test WebGL:** Visit https://get.webgl.org/ to verify WebGL is working
+
+#### Controls Not Responding
+
+- Make sure the browser window is focused (click on the game)
+- Check browser console (F12) for errors
+- The drone is automatically armed - just press SPACE to fly!
+
 ### Desktop Application (Electron)
 
 ```bash
@@ -121,6 +148,8 @@ npm run build:electron
 ## Game Controls
 
 ### Keyboard Controls
+
+> **Note:** The drone is now **automatically armed** when you start a game. No need to press R first!
 
 | Action | Primary Key | Alternative |
 |--------|-------------|-------------|

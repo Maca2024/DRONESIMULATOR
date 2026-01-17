@@ -91,7 +91,7 @@ export const useGameStore = create<GameState>((set) => ({
       score: 0,
       comboMultiplier: 1,
       currentMission: mission || null,
-      drone: { ...initialDroneState },
+      drone: { ...initialDroneState, isArmed: true }, // Auto-arm drone on start
     }),
 
   pauseGame: () =>

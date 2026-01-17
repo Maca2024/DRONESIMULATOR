@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
+import { audioSystem } from '../systems/AudioSystem';
 import styles from './HUD.module.css';
 
 export function HUD(): JSX.Element {
@@ -10,6 +11,7 @@ export function HUD(): JSX.Element {
   const comboMultiplier = useGameStore((state) => state.comboMultiplier);
   const input = useInputStore((state) => state.input);
   const pauseGame = useGameStore((state) => state.pauseGame);
+  const toggleArm = useGameStore((state) => state.toggleArm);
 
   const [fps, setFps] = useState(60);
 
@@ -33,17 +35,31 @@ export function HUD(): JSX.Element {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // Keyboard shortcut for pause
+  // Keyboard shortcuts for pause and arm/disarm
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.code === 'Escape' || e.code === 'KeyP') {
         pauseGame();
       }
+      // Arm with R key
+      if (e.code === 'KeyR' && !e.repeat) {
+        if (!drone.isArmed) {
+          toggleArm();
+          audioSystem.playEffect('arm');
+        }
+      }
+      // Disarm with T key
+      if (e.code === 'KeyT' && !e.repeat) {
+        if (drone.isArmed) {
+          toggleArm();
+          audioSystem.playEffect('disarm');
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pauseGame]);
+  }, [pauseGame, toggleArm, drone.isArmed]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -134,7 +150,7 @@ export function HUD(): JSX.Element {
           {drone.isArmed ? '🟢 ARMED' : '🔴 DISARMED'}
         </div>
         <div className={styles.inputSource}>
-          Input: {input.source.toUpperCase()}
+          Roll: {input.roll.toFixed(2)} | Pitch: {input.pitch.toFixed(2)} | Yaw: {input.yaw.toFixed(2)}
         </div>
       </div>
 

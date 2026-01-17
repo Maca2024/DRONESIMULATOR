@@ -51,17 +51,29 @@ export function useGameManager(): GameManagerState & GameManagerActions {
   const updateDrone = useGameStore((state) => state.updateDrone);
   const addScore = useGameStore((state) => state.addScore);
   const crash = useGameStore((state) => state.crash);
+  const isArmed = useGameStore((state) => state.drone.isArmed);
   const getInput = useInputStore((state) => state.getInput);
 
   // Initialize audio on first interaction
   const initAudio = useCallback(() => {
     audioSystem.initialize();
+    // Resume the audio context - required by Web Audio API after user interaction
+    void audioSystem.resume();
   }, []);
 
   // Main update loop
   const update = useCallback(
     (dt: number) => {
-      const input = getInput();
+      const rawInput = getInput();
+
+      // When disarmed, zero out all control inputs (drone should not respond)
+      const input = isArmed ? rawInput : {
+        ...rawInput,
+        throttle: 0,
+        yaw: 0,
+        pitch: 0,
+        roll: 0,
+      };
 
       // Run physics at higher frequency for stability
       const physicsSteps = 4;
@@ -124,7 +136,7 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         euler: physics.current.getEulerAngles(),
       };
     },
-    [getInput, updateDrone, addScore, crash]
+    [getInput, updateDrone, addScore, crash, isArmed]
   );
 
   // Reset physics
