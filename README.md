@@ -1,4 +1,4 @@
-# Aetherwing Drone Simulator
+# 🚁 Aetherwing FPV Drone Simulator
 
 ```
     ___    ________________  ____________       _____   ________
@@ -7,94 +7,184 @@
  / ___ |/ /___  / / / __  / /___/ _, _/    / / ___ / /___/ /___
 /_/  |_/_____/ /_/ /_/ /_/_____/_/ |_|    /_/_/  |_\____/_____/
 
-        STRATEGIC FPV DRONE FLIGHT SIMULATOR
+        PROFESSIONAL FPV DRONE FLIGHT SIMULATOR
 ```
 
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
-[![Three.js](https://img.shields.io/badge/Three.js-0.160-black.svg)](https://threejs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5.0-646cff.svg)](https://vitejs.dev/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+<div align="center">
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+[![Three.js](https://img.shields.io/badge/Three.js-R3F-000000?style=for-the-badge&logo=three.js&logoColor=white)](https://threejs.org/)
+[![Electron](https://img.shields.io/badge/Electron-28.0-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tests](https://img.shields.io/badge/Tests-104%20Passing-00ff88?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+**A professional-grade FPV drone flight simulator with realistic physics, Betaflight-accurate rate curves, and multi-layer audio synthesis.**
+
+[🎮 Play Now](https://maca2024.github.io/DRONESIMULATOR) · [📖 Documentation](#documentation) · [🐛 Report Bug](https://github.com/Maca2024/DRONESIMULATOR/issues)
+
+</div>
 
 ---
 
-## Table of Contents
+## 📋 Table of Contents
 
-1. [Overview](#overview)
-2. [Features](#features)
-3. [Quick Start](#quick-start)
-4. [Game Controls](#game-controls)
-5. [Flight Modes](#flight-modes)
-6. [Game Modes](#game-modes)
-7. [Technical Architecture](#technical-architecture)
-8. [Physics Engine](#physics-engine)
-9. [Audio System](#audio-system)
-10. [Accessibility](#accessibility)
-11. [Development](#development)
-12. [Testing](#testing)
-13. [Deployment](#deployment)
-14. [Contributing](#contributing)
+- [Overview](#-overview)
+- [Features](#-features)
+- [Technology Stack](#-technology-stack)
+- [Getting Started](#-getting-started)
+- [Controls](#-controls)
+- [Professional Audio System](#-professional-audio-system)
+- [Betaflight Rates System](#-betaflight-rates-system)
+- [Flight Physics](#-flight-physics)
+- [Architecture](#-architecture)
+- [Development](#-development)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## Overview
+## 🎯 Overview
 
-**Aetherwing** is a browser-based FPV (First Person View) drone flight simulator that provides a realistic quadcopter flying experience. Built with modern web technologies, it features:
-
-- **Realistic Physics**: Custom 500Hz physics engine with accurate quadcopter dynamics
-- **Multiple Input Methods**: Keyboard, mouse, gamepad, and RC transmitter support
-- **Progressive Learning**: 5-level tutorial system from novice to expert
-- **Mission System**: Various mission types including time trials, precision landing, and more
-- **Accessibility First**: Comprehensive accessibility features for all users
+Aetherwing is a high-fidelity FPV (First Person View) drone flight simulator designed to provide an immersive and realistic flying experience. Built entirely with modern web technologies, it runs in any browser or as a standalone desktop application via Electron.
 
 ### Why Aetherwing?
 
-- **No Installation Required**: Runs directly in your browser
-- **Cross-Platform**: Works on Windows, macOS, and Linux
-- **Educational**: Learn drone physics and flight principles
-- **Customizable**: Adjust physics, controls, and visual settings
+| Feature | Description |
+|---------|-------------|
+| **Realistic Physics** | Custom 500Hz physics engine with accurate quadcopter dynamics |
+| **Professional Audio** | Multi-layer synthesized motor sounds with harmonics, warmth filtering, and brick-wall limiting |
+| **Betaflight Rates** | Industry-standard "Actual Rates" control model used by real FPV pilots worldwide |
+| **Combined Input Mode** | Seamless use of keyboard, mouse, and gamepad simultaneously |
+| **Zero Installation** | Play directly in your browser or download the desktop app |
+| **104+ Tests** | Comprehensive test suite ensuring reliability |
+
+### What Makes It Special
+
+Unlike other simulators, Aetherwing implements:
+
+1. **True Betaflight Rates**: The same rate calculation algorithm used in real Betaflight flight controllers
+2. **Multi-Layer Motor Audio**: Each of the 4 motors generates 5 audio layers (fundamental + 3 harmonics + body resonance)
+3. **Velocity-Based Mouse Control**: Mouse movement creates angular velocity with natural decay
+4. **Professional Audio Chain**: Compressor → High-cut → Warmth filter → Brick-wall limiter
 
 ---
 
-## Features
+## ✨ Features
 
-### Core Features
+### 🎮 Flight Control System
 
 | Feature | Description |
 |---------|-------------|
-| **Realistic Physics** | 500Hz simulation with thrust, drag, ground effect, and gravity |
-| **4 Drone Presets** | Beginner, Intermediate, Racing, and Freestyle configurations |
-| **3 Flight Modes** | Angle (self-leveling), Horizon, and Acro (manual) |
-| **4 Camera Modes** | Chase, FPV, Orbit, and Cinematic views |
-| **Progressive Tutorial** | 5 levels with 20+ training tasks |
-| **Mission System** | 6 mission types with scoring and rewards |
-| **Procedural Audio** | Real-time motor sounds based on RPM |
+| **Combined Input Mode** | Use keyboard, mouse, and gamepad simultaneously - all inputs blend together |
+| **Mouse Flight** | Intuitive velocity-based mouse control with 15%/frame decay |
+| **Betaflight Rates** | Professional "Actual Rates" control curves with expo |
+| **Rate Profiles** | Freestyle (850°/s), Racing (1000°/s), Cinematic (400°/s), Beginner (500°/s) |
+| **Input Smoothing** | Configurable expo and smoothing for all axes |
+| **Scroll Throttle** | Mouse scroll wheel for precise throttle control |
+
+### 🔊 Professional Audio System (ProAudioSystem)
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Layer Synthesis** | Fundamental + 3 harmonics + body resonance per motor (20+ oscillators total) |
+| **4-Motor Simulation** | Individual motor sounds with stereo panning based on position |
+| **Triangle/Sine Waves** | Smooth oscillators instead of harsh sawtooth for pleasant sound |
+| **Warmth Filter** | Low-shelf filter at 300Hz adding +2dB warmth |
+| **Brick-Wall Limiter** | Dynamics compressor at -3dB with 20:1 ratio prevents all clipping |
+| **High-Cut Filter** | 8000Hz lowpass removes harsh high frequencies |
+| **Wind Effects** | Velocity-based wind noise with dynamic filtering |
+| **Auto-Resume** | Automatic audio context resume for browser autoplay policy |
+| **Sound Effects** | Arm, disarm, checkpoint, crash, warning, success, fail, mode change |
+| **Background Music** | Toggleable ambient music with M key |
+
+### 🎨 Visual Features
+
+| Feature | Description |
+|---------|-------------|
+| **React Three Fiber** | GPU-accelerated 3D rendering |
+| **Dynamic Shadows** | Real-time shadow mapping |
+| **Procedural Sky** | Atmospheric scattering simulation |
+| **HUD Overlay** | Flight telemetry, attitude indicator, throttle gauge |
+| **Controls Help** | Auto-showing help overlay (H to toggle) |
+| **Multiple Cameras** | FPV (C), chase, and orbit camera modes |
+| **60+ FPS** | Optimized for smooth performance |
 | **Particle Effects** | Thrust particles and visual feedback |
 
-### Accessibility Features
+### 🏁 Game Modes
 
-- **Motor Accessibility**: One-handed mode, extended deadzone, auto-stabilization
-- **Visual Accessibility**: Colorblind modes, high contrast, UI scaling (1x-3x)
-- **Audio Accessibility**: Visual audio cues, subtitles, mono audio
-- **Cognitive Support**: Simplified HUD, extended time limits, visual guides
+| Mode | Description |
+|------|-------------|
+| **Free Flight** | Open sandbox exploration |
+| **Race Mode** | Time-trial through checkpoints |
+| **Tutorial** | 5-level progressive training (20+ tasks) |
+| **Missions** | 6 mission types with scoring |
+
+### ♿ Accessibility
+
+| Category | Features |
+|----------|----------|
+| **Motor** | One-handed mode, extended deadzone, input smoothing, auto-stabilization |
+| **Visual** | Colorblind modes, high contrast, UI scaling (1x-3x), large text, reduce motion |
+| **Audio** | Visual audio cues, subtitles, mono audio |
+| **Cognitive** | Simplified HUD, extended time limits, visual guides |
 
 ---
 
-## Quick Start
+## 🛠 Technology Stack
+
+### Frontend
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **React** | 18.2 | UI component framework with hooks |
+| **TypeScript** | 5.3 | Type-safe JavaScript with strict mode |
+| **Three.js** | 0.160 | 3D graphics engine |
+| **React Three Fiber** | Latest | Declarative Three.js for React |
+| **Drei** | Latest | R3F helpers and abstractions |
+| **Zustand** | Latest | Lightweight state management |
+| **CSS Modules** | - | Scoped component styling |
+
+### Audio
+
+| Technology | Purpose |
+|------------|---------|
+| **Web Audio API** | Low-latency audio synthesis |
+| **OscillatorNode** | Motor sound generation (triangle/sine waves) |
+| **BiquadFilterNode** | EQ, warmth filtering, high-cut |
+| **DynamicsCompressorNode** | Limiting and dynamics control |
+| **StereoPannerNode** | Spatial motor positioning |
+| **GainNode** | Volume control per layer |
+
+### Build & Development
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Vite** | 5.0 | Fast development server and bundler |
+| **Electron** | 28.0 | Desktop application wrapper |
+| **Vitest** | Latest | Unit and integration testing |
+| **ESLint** | Latest | Code linting and style enforcement |
+| **Prettier** | Latest | Code formatting |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
 - **Node.js** 18.0 or higher
-- **npm** 9.0 or higher
-- A modern browser (Chrome, Firefox, Edge, Safari)
+- **npm** 9.0 or higher (or yarn/pnpm)
+- **Git** for cloning the repository
+- Modern browser (Chrome, Firefox, Edge, Safari)
 
 ### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/Maca2024/DRONESIMULATOR.git
-
-# Navigate to project directory
 cd DRONESIMULATOR
 
 # Install dependencies
@@ -104,246 +194,320 @@ npm install
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`
+The development server will start at `http://localhost:5173`.
 
-### Desktop Application (Electron)
+### Desktop Application
 
 ```bash
-# Start with Electron wrapper
+# Build and run Electron app
 npm run electron:dev
 
-# Build desktop application
+# Package for distribution
 npm run build:electron
 ```
 
+### Quick Start Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run all 104+ tests |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage report |
+| `npm run lint` | Lint source files |
+| `npm run lint:fix` | Fix ESLint issues |
+| `npm run quality` | Run typecheck + lint + format + test |
+| `npm run electron:dev` | Start Electron in development |
+| `npm run build:electron` | Package Electron app |
+
 ---
 
-## Game Controls
+## 🎮 Controls
+
+### Combined Input Mode
+
+Aetherwing features **Combined Input Mode** where all input devices work simultaneously:
+
+- Keyboard provides digital input with analog simulation
+- Mouse provides velocity-based control with natural decay
+- Gamepad provides full analog precision
+- **All inputs blend together seamlessly**
 
 ### Keyboard Controls
 
-| Action | Primary Key | Alternative |
-|--------|-------------|-------------|
-| **Pitch Forward** | W | Arrow Up |
-| **Pitch Backward** | S | Arrow Down |
-| **Roll Left** | A | Arrow Left |
-| **Roll Right** | D | Arrow Right |
-| **Throttle Up** | Space | - |
-| **Throttle Down** | Shift | - |
-| **Yaw Left** | Q | - |
-| **Yaw Right** | E | - |
-| **Arm Drone** | R | - |
-| **Disarm Drone** | T | - |
-| **Angle Mode** | 1 | - |
-| **Horizon Mode** | 2 | - |
-| **Acro Mode** | 3 | - |
-| **Cycle Camera** | C | - |
-| **Pause** | P | Escape |
+| Key | Action |
+|-----|--------|
+| **W / S** | Pitch forward / backward |
+| **A / D** | Roll left / right |
+| **Q / E** | Yaw left / right |
+| **Space** | Increase throttle |
+| **Shift** | Decrease throttle |
+| **R** | Arm / Disarm motors |
+| **C** | Cycle camera modes |
+| **M** | Toggle background music |
+| **H** | Toggle controls help overlay |
+| **P / Esc** | Pause game |
+| **1 / 2 / 3** | Angle / Horizon / Acro mode |
 
-### Gamepad Controls (Mode 2 - Standard)
+### Mouse Controls
 
-| Stick/Button | Action |
-|--------------|--------|
-| Left Stick Y | Throttle |
-| Left Stick X | Yaw |
-| Right Stick Y | Pitch |
-| Right Stick X | Roll |
-| Left Bumper | Disarm |
-| Right Bumper | Arm |
-| D-Pad | Flight Mode Selection |
-
----
-
-## Flight Modes
-
-### Angle Mode (Beginner)
-
-- **Auto-leveling**: Drone automatically levels when sticks are centered
-- **Angle Limit**: Maximum tilt angle of 45 degrees
-- **Best For**: Learning basic controls, hovering practice
-
-### Horizon Mode (Intermediate)
-
-- **Hybrid Mode**: Self-levels at center, allows full rotation at extremes
-- **Angle Limit**: None (can flip when stick is at maximum)
-- **Best For**: Transitioning from Angle to Acro
-
-### Acro Mode (Expert)
-
-- **Full Manual**: No auto-leveling, complete control
-- **Rate-Based**: Stick position controls rotation rate, not angle
-- **Best For**: Freestyle flying, racing, advanced maneuvers
-
----
-
-## Game Modes
-
-### Free Play
-
-Open flying with no objectives. Practice maneuvers, explore the environment, or just enjoy flying.
-
-### Tutorial
-
-Progressive training system with 5 skill levels:
-
-| Level | Skills Taught |
-|-------|---------------|
-| **Novice** | Throttle control, hovering, landing |
-| **Beginner** | Yaw rotation, forward/backward, strafing |
-| **Intermediate** | Banking turns, figure-8, precision hover |
-| **Advanced** | Acro mode basics, first flip |
-| **Expert** | Power loops, split-S, advanced tricks |
-
-### Missions
-
-| Type | Description | Objectives |
-|------|-------------|------------|
-| **Time Trial** | Race through checkpoints | Speed, efficiency |
-| **Precision** | Land/hover at specific points | Accuracy, control |
-| **Search** | Find hidden markers | Exploration |
-| **Delivery** | Transport items | Navigation |
-| **Survival** | Navigate obstacles | Endurance |
-| **CTF** | Capture objectives | Strategy |
-
-### Scoring System
-
-| Event | Points |
+| Input | Action |
 |-------|--------|
-| Objective Complete | +1000 |
-| Time Bonus (per second under par) | +100 |
-| Combo Multiplier | Up to 2.0x |
-| Collision Penalty | -500 |
-| Reset Penalty | -1000 |
+| **Move Left/Right** | Roll (velocity-based with decay) |
+| **Move Up/Down** | Pitch (velocity-based with decay) |
+| **Scroll Up** | Increase throttle |
+| **Scroll Down** | Decrease throttle |
+| **Left Click + Move** | Yaw control |
+| **Right Click** | Toggle pointer lock |
+
+The mouse uses a **velocity-based system**:
+- Mouse movement creates angular velocity
+- 15% decay per frame when mouse stops moving
+- Feels natural and responsive
+- No infinite accumulation
+
+### Gamepad Controls (Xbox Layout)
+
+| Input | Action |
+|-------|--------|
+| **Left Stick Y** | Throttle |
+| **Left Stick X** | Yaw |
+| **Right Stick Y** | Pitch |
+| **Right Stick X** | Roll |
+| **A Button** | Arm / Disarm |
+| **B Button** | Cycle camera |
+| **Start** | Pause |
+| **D-Pad** | Flight mode selection |
 
 ---
 
-## Technical Architecture
+## 🔊 Professional Audio System
 
-### Project Structure
+### Architecture
 
-```
-DRONESIMULATOR/
-├── src/
-│   ├── renderer/                 # Main application code
-│   │   ├── core/                 # Physics engine
-│   │   │   └── PhysicsEngine.ts  # 500Hz quadcopter physics
-│   │   │
-│   │   ├── store/                # Zustand state management
-│   │   │   ├── gameStore.ts      # Game state, drone, scoring
-│   │   │   ├── inputStore.ts     # Input handling, normalization
-│   │   │   ├── settingsStore.ts  # Persistent settings
-│   │   │   └── progressStore.ts  # Player progression
-│   │   │
-│   │   ├── systems/              # Game systems
-│   │   │   ├── TutorialSystem.ts # Progressive training
-│   │   │   ├── MissionSystem.ts  # Mission management
-│   │   │   └── AudioSystem.ts    # Procedural audio
-│   │   │
-│   │   ├── hooks/                # React hooks
-│   │   │   ├── useGameManager.ts # Game loop coordination
-│   │   │   └── useCameraController.ts
-│   │   │
-│   │   ├── components/           # 3D components
-│   │   │   ├── DroneModel.tsx    # Animated quadcopter
-│   │   │   ├── Terrain.tsx       # Procedural terrain
-│   │   │   ├── Environment.tsx   # Sky, lighting
-│   │   │   └── ParticleEffects.tsx
-│   │   │
-│   │   ├── scenes/               # 3D scenes
-│   │   │   ├── GameScene.tsx     # Main game scene
-│   │   │   └── Drone.tsx         # Drone scene component
-│   │   │
-│   │   ├── ui/                   # UI components
-│   │   │   ├── MainMenu.tsx
-│   │   │   ├── HUD.tsx
-│   │   │   ├── SettingsPanel.tsx
-│   │   │   └── TutorialOverlay.tsx
-│   │   │
-│   │   ├── App.tsx               # Root component
-│   │   └── main.tsx              # Entry point
-│   │
-│   ├── shared/                   # Shared code
-│   │   ├── types.ts              # TypeScript definitions
-│   │   └── constants.ts          # Configuration constants
-│   │
-│   └── test/                     # Test utilities
-│       └── setup.ts
-│
-├── index.html                    # HTML entry point
-├── vite.config.ts                # Vite configuration
-├── vitest.config.ts              # Test configuration
-├── tsconfig.json                 # TypeScript configuration
-└── package.json                  # Dependencies and scripts
-```
-
-### Technology Stack
-
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **UI Framework** | React 18 | Component-based UI |
-| **3D Rendering** | Three.js + React Three Fiber | WebGL rendering |
-| **State Management** | Zustand | Lightweight state |
-| **Physics** | Custom Engine | 500Hz simulation |
-| **Audio** | Web Audio API | Procedural sounds |
-| **Build Tool** | Vite | Fast development |
-| **Desktop** | Electron | Native app wrapper |
-| **Language** | TypeScript | Type safety |
-| **Testing** | Vitest | Unit testing |
-
-### Data Flow
+The ProAudioSystem provides realistic drone audio through multi-layer synthesis:
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        GAME LOOP (60 FPS)                        │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐  │
-│  │ Input Store │───>│ Game Manager│───>│ Physics Engine      │  │
-│  │ (keyboard,  │    │ (coordinate │    │ (500Hz, 4 substeps) │  │
-│  │  gamepad)   │    │  systems)   │    │                     │  │
-│  └─────────────┘    └─────────────┘    └─────────────────────┘  │
-│         │                  │                      │              │
-│         │                  ▼                      ▼              │
-│         │         ┌─────────────┐    ┌─────────────────────┐    │
-│         │         │ Tutorial/   │    │ Game Store          │    │
-│         │         │ Mission Sys │    │ (drone state,       │    │
-│         │         └─────────────┘    │  score, screen)     │    │
-│         │                  │         └─────────────────────┘    │
-│         │                  │                      │              │
-│         ▼                  ▼                      ▼              │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                    REACT RENDERING                          ││
-│  │  ┌──────────┐  ┌───────────┐  ┌────────────┐               ││
-│  │  │ 3D Scene │  │ UI Overlay│  │ Audio Sys  │               ││
-│  │  │ (Three.js│  │ (HUD,     │  │ (motor     │               ││
-│  │  │  + R3F)  │  │  menus)   │  │  sounds)   │               ││
-│  │  └──────────┘  └───────────┘  └────────────┘               ││
-│  └─────────────────────────────────────────────────────────────┘│
-│                                                                  │
-└──────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     AUDIO SIGNAL CHAIN                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────┐                                            │
+│  │ Motor 1         │                                            │
+│  │ ├─ Fundamental  │──┐                                         │
+│  │ ├─ 2nd Harmonic │  │                                         │
+│  │ ├─ 3rd Harmonic │  │    ┌────────────────┐                   │
+│  │ └─ Body Reson.  │  │    │   Dynamics     │                   │
+│  └─────────────────┘  ├───►│   Compressor   │                   │
+│                       │    │   (threshold:  │                   │
+│  ┌─────────────────┐  │    │    -24dB)      │                   │
+│  │ Motor 2 (×4)    │──┤    └───────┬────────┘                   │
+│  └─────────────────┘  │            │                            │
+│                       │            ▼                            │
+│  ┌─────────────────┐  │    ┌────────────────┐                   │
+│  │ Motor 3 (×4)    │──┤    │   High-Cut     │                   │
+│  └─────────────────┘  │    │   Filter       │                   │
+│                       │    │   (8000Hz LP)  │                   │
+│  ┌─────────────────┐  │    └───────┬────────┘                   │
+│  │ Motor 4 (×4)    │──┘            │                            │
+│  └─────────────────┘               ▼                            │
+│                            ┌────────────────┐                   │
+│  ┌─────────────────┐       │   Warmth       │                   │
+│  │ Wind Noise      │──────►│   Filter       │                   │
+│  │ (velocity-based)│       │   (300Hz +2dB) │                   │
+│  └─────────────────┘       └───────┬────────┘                   │
+│                                    │                            │
+│                                    ▼                            │
+│                            ┌────────────────┐                   │
+│                            │   Brick-Wall   │                   │
+│                            │   Limiter      │                   │
+│                            │   (-3dB, 20:1) │                   │
+│                            └───────┬────────┘                   │
+│                                    │                            │
+│                                    ▼                            │
+│                            ┌────────────────┐                   │
+│                            │   Master Gain  │───► Output        │
+│                            │   (0.0 - 1.0)  │                   │
+│                            └────────────────┘                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Motor Sound Layers
+
+Each of the 4 motors generates 5 audio layers:
+
+| Layer | Waveform | Frequency | Purpose |
+|-------|----------|-----------|---------|
+| **Fundamental** | Triangle | RPM-based (150-600Hz) | Base motor frequency |
+| **2nd Harmonic** | Sine | 2× fundamental | First overtone |
+| **3rd Harmonic** | Sine | 3× fundamental | Second overtone |
+| **4th Harmonic** | Sine | 4× fundamental | Third overtone |
+| **Body Resonance** | Sine | 0.5× fundamental | Low-frequency frame vibration |
+
+### Harmonic Volumes
+
+| Harmonic | Relative Volume |
+|----------|-----------------|
+| Fundamental | 100% |
+| 2nd Harmonic | 30% |
+| 3rd Harmonic | 15% |
+| 4th Harmonic | 8% |
+| Body Resonance | 20% |
+
+### Audio Configuration
+
+```typescript
+audioSystem.setConfig({
+  masterVolume: 0.8,    // 0.0 - 1.0
+  motorVolume: 0.7,     // Motor mix level
+  effectsVolume: 0.5,   // Sound effects level
+  musicVolume: 0.3,     // Background music level
+});
+```
+
+### Sound Effects
+
+| Effect | Trigger | Description |
+|--------|---------|-------------|
+| **Arm** | R key / motors armed | Rising tone sequence |
+| **Disarm** | Motors disarmed | Falling tone sequence |
+| **Checkpoint** | Gate passed | Success chime |
+| **Crash** | Collision detected | Impact noise with decay |
+| **Warning** | Low battery/altitude | Alert beep |
+| **Success** | Race completed | Victory fanfare |
+| **Fail** | Crash or timeout | Failure tone |
+| **Mode Change** | Flight mode change | Mode indicator sound |
+
+### Browser Autoplay Handling
+
+The audio system automatically handles browser autoplay policies:
+
+```typescript
+// Auto-resume on first user interaction
+setupAutoResume(): void {
+  const resumeAudio = (): void => {
+    if (this.context?.state === 'suspended') {
+      this.context.resume();
+    }
+  };
+
+  ['click', 'keydown', 'touchstart', 'mousedown'].forEach(event => {
+    window.addEventListener(event, resumeAudio, { passive: true });
+  });
+}
 ```
 
 ---
 
-## Physics Engine
+## 🎛 Betaflight Rates System
 
 ### Overview
 
-The physics engine simulates realistic quadcopter dynamics at 500Hz for stability and accuracy.
+Aetherwing implements the industry-standard **Betaflight "Actual Rates"** control model, the same algorithm used in real Betaflight flight controllers worldwide.
 
-### Physics Model
+### Rate Calculation Formula
 
 ```
-Motor Layout (X Configuration):
+rate = centerSensitivity × (1 + expo × stick²) + maxRate × stick³
 
+Where:
+- stick = normalized stick input (-1.0 to 1.0)
+- centerSensitivity = response at stick center (°/s)
+- maxRate = maximum rotation rate at full stick (°/s)
+- expo = curve shape (0 = linear, higher = more center sensitivity)
+```
+
+### Rate Parameters
+
+| Parameter | Description | Typical Range |
+|-----------|-------------|---------------|
+| **Center Sensitivity** | Response at stick center | 100-250 °/s |
+| **Max Rate** | Maximum rotation rate at full stick | 600-1200 °/s |
+| **Expo** | Curve shape (0=linear, higher=more center) | 0.0-0.8 |
+
+### Rate Presets
+
+| Preset | Center | Max Rate | Expo | Best For |
+|--------|--------|----------|------|----------|
+| **Freestyle** | 200°/s | 850°/s | 0.4 | Tricks, acrobatic flying |
+| **Racing** | 250°/s | 1000°/s | 0.2 | Speed, precision turns |
+| **Cinematic** | 100°/s | 400°/s | 0.6 | Smooth video, slow movements |
+| **Beginner** | 120°/s | 500°/s | 0.5 | Learning, forgiving control |
+
+### Rate Curve Visualization
+
+```
+Rotation Rate (°/s)
+        ^
+  1000 ─┤                                    ╭─── Racing
+        │                                 ╭──╯
+   850 ─┤                              ╭──╯←── Freestyle
+        │                           ╭──╯
+   600 ─┤                        ╭──╯
+        │                     ╭──╯
+   400 ─┤               ╭─────╯←── Cinematic
+        │          ╭────╯
+   200 ─┤     ╭────╯
+        │ ╭───╯
+     0 ─┼────────────────────────────────────────────►
+        0    0.2   0.4   0.6   0.8   1.0    Stick Position
+```
+
+### Usage in Code
+
+```typescript
+import { BetaflightRates, RateProfile, RATE_PRESETS } from './BetaflightRates';
+
+const rates = new BetaflightRates();
+
+// Use a preset
+rates.setProfile(RATE_PRESETS.freestyle);
+
+// Or create custom profile
+const customProfile: RateProfile = {
+  roll: { rcRate: 200, maxRate: 800, expo: 0.3 },
+  pitch: { rcRate: 200, maxRate: 800, expo: 0.3 },
+  yaw: { rcRate: 150, maxRate: 600, expo: 0.2 },
+};
+rates.setProfile(customProfile);
+
+// Calculate rates from stick input
+const result = rates.calculate({
+  roll: 0.5,   // 50% right
+  pitch: -0.3, // 30% forward
+  yaw: 0.0,    // centered
+});
+
+// result = { roll: 425, pitch: -240, yaw: 0 } (°/s)
+```
+
+---
+
+## 🚁 Flight Physics
+
+### Physics Engine
+
+The physics engine simulates realistic quadcopter dynamics at 500Hz:
+
+| Property | Value | Description |
+|----------|-------|-------------|
+| **Timestep** | 1/500 s | 500Hz physics rate |
+| **Substeps** | 4 | 4 physics updates per frame |
+| **Gravity** | 9.81 m/s² | Earth gravity |
+| **Air Density** | 1.225 kg/m³ | Sea level |
+
+### Motor Layout (X Configuration)
+
+```
     Motor 1 (CW)        Motor 2 (CCW)
            \              /
             \            /
              \          /
               +--------+
-              |        |
-              | DRONE  |
-              |        |
+              |  DRONE |
               +--------+
              /          \
             /            \
@@ -351,253 +515,316 @@ Motor Layout (X Configuration):
     Motor 4 (CCW)       Motor 3 (CW)
 ```
 
-### Thrust Calculation
-
-```
-T = Ct × ρ × n² × D⁴
-
-Where:
-- Ct = Thrust coefficient
-- ρ  = Air density (1.225 kg/m³)
-- n  = Motor RPM
-- D  = Propeller diameter
-```
-
 ### Forces Applied
 
 | Force | Formula | Description |
 |-------|---------|-------------|
 | **Thrust** | T = Ct × ρ × n² × D⁴ | Upward force from motors |
-| **Gravity** | F = m × g | Downward force (9.81 m/s²) |
+| **Gravity** | F = m × g | Downward force |
 | **Drag** | F = 0.5 × Cd × ρ × A × v² | Air resistance |
-| **Ground Effect** | +30% thrust | Increased efficiency near ground |
-
-### Physics Constants
-
-| Constant | Value | Unit |
-|----------|-------|------|
-| Timestep | 1/500 | seconds |
-| Gravity | 9.81 | m/s² |
-| Air Density | 1.225 | kg/m³ |
-| Max Altitude | 500 | meters |
-| Ground Effect Range | 1.0 | meters |
+| **Ground Effect** | +30% thrust | Increased efficiency < 1m |
 
 ### Drone Presets
 
 | Preset | Mass | Thrust | Roll Rate | Pitch Rate | Yaw Rate |
 |--------|------|--------|-----------|------------|----------|
-| Beginner | 0.50 kg | 1.2x | 200°/s | 200°/s | 150°/s |
-| Intermediate | 0.40 kg | 1.5x | 400°/s | 400°/s | 250°/s |
-| Racing | 0.35 kg | 2.0x | 600°/s | 600°/s | 400°/s |
-| Freestyle | 0.45 kg | 1.8x | 500°/s | 500°/s | 350°/s |
+| **Beginner** | 0.50 kg | 1.2× | 200°/s | 200°/s | 150°/s |
+| **Intermediate** | 0.40 kg | 1.5× | 400°/s | 400°/s | 250°/s |
+| **Racing** | 0.35 kg | 2.0× | 600°/s | 600°/s | 400°/s |
+| **Freestyle** | 0.45 kg | 1.8× | 500°/s | 500°/s | 350°/s |
+
+### Flight Modes
+
+| Mode | Auto-Level | Angle Limit | Best For |
+|------|------------|-------------|----------|
+| **Angle** | Yes | ±45° | Beginners, hovering |
+| **Horizon** | Yes (center) | None | Transitional |
+| **Acro** | No | None | Experts, freestyle |
 
 ---
 
-## Audio System
+## 🏗 Architecture
 
-### Procedural Motor Sounds
-
-The audio system generates real-time motor sounds using the Web Audio API:
+### Directory Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     AUDIO SYSTEM                                │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Motor RPM ──► Oscillator (Sawtooth) ──► Lowpass Filter         │
-│                     │                          │                │
-│                     └──────── + ───────────────┤                │
-│                               │                │                │
-│  Noise Generator ──► Bandpass Filter ─────────►│                │
-│                                                │                │
-│                                                ▼                │
-│                                          Gain Node              │
-│                                                │                │
-│                                                ▼                │
-│                                          Master Output          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+DRONESIMULATOR/
+├── src/
+│   ├── main/                    # Electron main process
+│   │   ├── index.ts            # Main entry point
+│   │   └── preload.ts          # Preload scripts
+│   │
+│   ├── renderer/                # React application
+│   │   ├── components/         # 3D React components
+│   │   │   ├── DroneModel.tsx  # Animated quadcopter mesh
+│   │   │   ├── Terrain.tsx     # Procedural terrain
+│   │   │   ├── Environment.tsx # Sky, clouds, lighting
+│   │   │   └── ParticleEffects.tsx
+│   │   │
+│   │   ├── core/               # Core systems
+│   │   │   └── PhysicsEngine.ts # 500Hz physics simulation
+│   │   │
+│   │   ├── hooks/              # Custom React hooks
+│   │   │   ├── useGameManager.ts    # Game loop coordination
+│   │   │   └── useCameraController.ts
+│   │   │
+│   │   ├── store/              # Zustand stores
+│   │   │   ├── gameStore.ts    # Game state, drone, scoring
+│   │   │   ├── inputStore.ts   # Combined input handling
+│   │   │   ├── settingsStore.ts # Persistent settings
+│   │   │   └── progressStore.ts # Player progression
+│   │   │
+│   │   ├── systems/            # Game systems
+│   │   │   ├── ProAudioSystem.ts    # Multi-layer audio synthesis
+│   │   │   ├── ProAudioSystem.test.ts # 25 audio tests
+│   │   │   ├── BetaflightRates.ts   # Rate calculator
+│   │   │   ├── BetaflightRates.test.ts # Rate tests
+│   │   │   ├── TutorialSystem.ts    # Progressive training
+│   │   │   ├── MissionSystem.ts     # Mission objectives
+│   │   │   └── AudioSystem.ts       # Legacy audio
+│   │   │
+│   │   ├── scenes/             # 3D scenes
+│   │   │   ├── GameScene.tsx   # Main 3D scene
+│   │   │   └── Drone.tsx       # Drone scene component
+│   │   │
+│   │   ├── ui/                 # UI components
+│   │   │   ├── HUD.tsx         # Flight HUD with help overlay
+│   │   │   ├── HUD.module.css  # HUD styles
+│   │   │   ├── MainMenu.tsx    # Main menu
+│   │   │   ├── PauseMenu.tsx   # Pause screen
+│   │   │   ├── SettingsPanel.tsx # Settings UI
+│   │   │   └── TutorialOverlay.tsx
+│   │   │
+│   │   ├── App.tsx             # Root component
+│   │   └── main.tsx            # React entry point
+│   │
+│   ├── shared/                 # Shared types/constants
+│   │   ├── types.ts            # TypeScript definitions
+│   │   └── constants.ts        # Physics, input, scoring
+│   │
+│   └── test/                   # Test utilities
+│       └── setup.ts
+│
+├── public/                     # Static assets
+├── .github/                    # GitHub Actions
+│   └── workflows/
+│       └── deploy.yml          # Auto-deploy to GitHub Pages
+├── CLAUDE.md                   # AI development guide
+├── CONTEXT.md                  # Technical architecture
+├── electron.vite.config.ts     # Vite configuration
+├── vitest.config.ts            # Test configuration
+├── package.json                # Dependencies
+└── tsconfig.json              # TypeScript config
 ```
 
-### Sound Effects
+### State Management
 
-| Effect | Description | Trigger |
-|--------|-------------|---------|
-| Checkpoint | 880Hz sine tone | Passing checkpoint |
-| Crash | Noise burst | Ground impact |
-| Arm | Square wave up | Arming drone |
-| Disarm | Square wave down | Disarming drone |
-| Success | C5-E5-G5 chord | Mission complete |
-| Fail | Descending tone | Mission failed |
+The application uses **Zustand** for state management:
+
+```typescript
+// Game Store - Core game state
+interface GameState {
+  drone: DroneState;
+  score: number;
+  missionTime: number;
+  comboMultiplier: number;
+  isPaused: boolean;
+  currentScreen: Screen;
+}
+
+// Input Store - Combined input handling
+interface InputState {
+  input: ControlInput;
+  mouseVelocity: { x: number; y: number };
+  combinedInputMode: boolean;  // All inputs work together
+  lastMouseMoveTime: number;
+}
+
+// Settings Store - Persistent user preferences
+interface SettingsState {
+  graphics: GraphicsSettings;
+  audio: AudioSettings;
+  controls: ControlSettings;
+  accessibility: AccessibilitySettings;
+}
+```
+
+### Game Loop
+
+```typescript
+// 60 FPS game loop with 500Hz physics substeps
+useFrame((state, delta) => {
+  // 1. Poll and process all input sources
+  inputStore.update();
+
+  // 2. Apply mouse velocity decay (15%/frame when not moving)
+  applyMouseDecay();
+
+  // 3. Calculate rates using Betaflight algorithm
+  const rates = betaflightRates.calculate(input, rateProfile);
+
+  // 4. Run 4 physics substeps at 500Hz
+  for (let i = 0; i < 4; i++) {
+    physics.update(rates, delta / 4);
+  }
+
+  // 5. Update audio based on motor RPM
+  audioSystem.update({
+    motorRPM: drone.motorRPM,
+    velocity: drone.velocity,
+    position: drone.position,
+    armed: drone.isArmed,
+    throttle: input.throttle,
+  });
+
+  // 6. Update game state
+  gameStore.tick(delta);
+});
+```
 
 ---
 
-## Accessibility
-
-### Motor Accessibility
-
-| Feature | Description |
-|---------|-------------|
-| One-Handed Mode | Simplified control scheme for single-hand use |
-| Extended Deadzone | Larger deadzone for tremor accommodation |
-| Input Smoothing | 0-100ms smoothing to reduce jitter |
-| Auto-Stabilization | 0-100% automatic leveling assistance |
-
-### Visual Accessibility
-
-| Feature | Options |
-|---------|---------|
-| Colorblind Mode | None, Deuteranopia, Protanopia, Tritanopia |
-| High Contrast | Enhanced UI contrast |
-| UI Scale | 1.0x to 3.0x scaling |
-| Large Text | Increased font sizes |
-| Reduce Motion | Disabled animations |
-| Disable Screen Shake | No camera shake effects |
-
-### Audio Accessibility
-
-| Feature | Description |
-|---------|-------------|
-| Visual Audio Cues | On-screen indicators for sounds |
-| Subtitles | Text for audio events |
-| Mono Audio | Combined stereo to mono |
-
-### Cognitive Accessibility
-
-| Feature | Description |
-|---------|-------------|
-| Simplified HUD | Reduced information display |
-| Extended Time Limits | Longer mission timers |
-| Visual Guides | Additional navigation helpers |
-
----
-
-## Development
-
-### Available Scripts
-
-```bash
-# Development
-npm run dev              # Start Vite dev server
-npm run electron:dev     # Start with Electron
-
-# Building
-npm run build            # TypeScript + Vite build
-npm run build:electron   # Full desktop app build
-npm run preview          # Preview production build
-
-# Code Quality
-npm run typecheck        # TypeScript type checking
-npm run lint             # ESLint checking
-npm run lint:fix         # Fix ESLint issues
-npm run format           # Format with Prettier
-npm run format:check     # Check formatting
-npm run quality          # Run all quality checks
-
-# Testing
-npm run test             # Run all tests
-npm run test:watch       # Watch mode
-npm run test:coverage    # With coverage report
-npm run test:physics     # Physics tests only
-```
-
-### Environment Setup
-
-1. Install Node.js 18+ and npm 9+
-2. Clone the repository
-3. Run `npm install`
-4. Start development with `npm run dev`
+## 💻 Development
 
 ### Code Style
 
-- **TypeScript**: Strict mode enabled
-- **ESLint**: Configured for React/TypeScript
-- **Prettier**: Code formatting
-- **Imports**: Absolute imports from `src/`
+- **Strict TypeScript**: No `any`, explicit return types
+- **Functional Components**: React hooks only
+- **Named Exports**: No default exports
+- **Immutable State**: All state updates are immutable
+- **ESLint + Prettier**: Consistent formatting
 
----
-
-## Testing
-
-### Test Structure
-
-```
-src/
-├── renderer/
-│   └── core/
-│       └── PhysicsEngine.test.ts    # Physics unit tests
-├── shared/
-│   ├── types.test.ts                # Type validation tests
-│   └── constants.test.ts            # Constants tests
-└── test/
-    └── setup.ts                     # Test configuration
-```
-
-### Running Tests
+### Adding New Features
 
 ```bash
-# All tests
-npm run test
+# New 3D component
+touch src/renderer/components/NewComponent.tsx
 
-# With coverage
-npm run test:coverage
+# New game system
+touch src/renderer/systems/NewSystem.ts
+touch src/renderer/systems/NewSystem.test.ts
 
-# Specific test file
-npm run test:physics
-
-# Watch mode
-npm run test:watch
+# New store
+touch src/renderer/store/newStore.ts
 ```
 
-### Test Coverage Goals
+### Environment Variables
 
-| Area | Target Coverage |
-|------|-----------------|
-| Physics Engine | 90%+ |
-| State Stores | 80%+ |
-| Game Systems | 75%+ |
+```bash
+# .env.local
+VITE_DEBUG_PHYSICS=true
+VITE_DEBUG_AUDIO=true
+VITE_SKIP_SPLASH=true
+```
 
 ---
 
-## Deployment
+## 🧪 Testing
 
-### Web Deployment (Vercel/Netlify)
+### Test Suite
+
+The project includes 104+ tests covering all core functionality:
+
+```bash
+# Run all tests
+npm run test
+
+# Run with coverage
+npm run test:coverage
+
+# Run in watch mode
+npm run test:watch
+
+# Run specific tests
+npm run test -- ProAudioSystem
+npm run test -- BetaflightRates
+```
+
+### Test Categories
+
+| Category | Tests | Coverage |
+|----------|-------|----------|
+| **ProAudioSystem** | 25 | Audio synthesis, effects, configuration |
+| **BetaflightRates** | 20 | Rate calculations, profiles, edge cases |
+| **PhysicsEngine** | 15 | Forces, integration, stability |
+| **InputStore** | 18 | Input handling, normalization |
+| **GameStore** | 12 | Game state, scoring |
+| **Components** | 14 | React component rendering |
+
+### Example Test
+
+```typescript
+describe('ProAudioSystem', () => {
+  it('should create 4 motor audio nodes with stereo panning', () => {
+    audioSystem.initialize();
+
+    // 4 motors with 5 oscillators each = 20+ oscillators
+    expect(mockAudioContext.createOscillator.mock.calls.length)
+      .toBeGreaterThanOrEqual(20);
+
+    // 4 stereo panners for motor positioning
+    expect(mockAudioContext.createStereoPanner)
+      .toHaveBeenCalledTimes(4);
+  });
+});
+```
+
+---
+
+## 🚀 Deployment
+
+### Web Deployment (GitHub Pages)
+
+The project auto-deploys to GitHub Pages on push to `main`:
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run build
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+```
+
+### Manual Web Deployment
 
 ```bash
 # Build for production
 npm run build
 
-# Output in dist/ directory
+# Deploy to GitHub Pages
+npm run deploy
 ```
 
-### Desktop Deployment (Electron)
+### Desktop Builds
 
 ```bash
-# Build desktop app
-npm run build:electron
+# Windows
+npm run build:electron -- --win
 
-# Output in release/ directory
-# - Windows: .exe installer
-# - macOS: .dmg file
-# - Linux: .AppImage file
-```
+# macOS
+npm run build:electron -- --mac
 
-### Docker Deployment
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-EXPOSE 5173
-CMD ["npm", "run", "preview"]
+# Linux
+npm run build:electron -- --linux
 ```
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 ### Getting Started
 
@@ -609,49 +836,55 @@ CMD ["npm", "run", "preview"]
 6. Push: `git push origin feature/amazing-feature`
 7. Open a Pull Request
 
-### Coding Guidelines
+### Code Guidelines
 
-- Follow TypeScript best practices
-- Write tests for new features
-- Document public APIs
-- Keep commits atomic and descriptive
+- Write tests for new features (aim for 80%+ coverage)
+- Follow existing code style
+- Update documentation as needed
+- Keep commits atomic and well-described
 
 ### Areas for Contribution
 
-- [ ] Additional drone presets
-- [ ] New mission types
-- [ ] Improved terrain generation
-- [ ] Mobile touch controls
-- [ ] Multiplayer support
-- [ ] VR support
+- 🎮 New game modes and missions
+- 🎨 Visual improvements and effects
+- 🔊 Additional sound effects and music
+- 🗺️ New environments and maps
+- 🎛️ Controller support improvements
+- 📱 Mobile/touch optimization
+- 🌐 Internationalization
+- 🥽 VR support
 
 ---
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
-- Three.js community for 3D rendering
-- React Three Fiber for declarative 3D
-- Zustand for elegant state management
-- The FPV drone community for physics inspiration
+- **Betaflight Team** - For the industry-standard rate calculation algorithm
+- **React Three Fiber** - For making 3D in React possible
+- **Web Audio API** - For low-latency audio synthesis capabilities
+- **The FPV Community** - For inspiration, feedback, and physics insights
+- **Zustand** - For elegant state management
 
 ---
 
-## Support
+## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/Maca2024/DRONESIMULATOR/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Maca2024/DRONESIMULATOR/discussions)
+- **Documentation**: [CLAUDE.md](./CLAUDE.md) | [CONTEXT.md](./CONTEXT.md)
 
 ---
 
 <div align="center">
 
-**[Website](https://aetherwing.dev)** | **[Documentation](./CLAUDE.md)** | **[Report Bug](https://github.com/Maca2024/DRONESIMULATOR/issues)**
+**Built with ❤️ for the FPV community**
+
+[🎮 Play Now](https://maca2024.github.io/DRONESIMULATOR) · [⬆️ Back to Top](#-aetherwing-fpv-drone-simulator)
 
 *"Master the skies, one throttle input at a time."*
 

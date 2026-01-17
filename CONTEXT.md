@@ -10,36 +10,32 @@
 ║    ██║  ██║███████╗   ██║   ██║  ██║███████╗██║  ██║╚███╔███╔╝██║██║ ╚████║   ║
 ║    ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝   ║
 ║                                                                               ║
-║                    TECHNICAL ARCHITECTURE DOCUMENT                            ║
+║                    TECHNICAL ARCHITECTURE DOCUMENT v2.0                       ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 ```
 
-Dit document beschrijft de volledige technische architectuur van de Aetherwing Drone Simulator, inclusief alle systemen, dataflows, en implementatiedetails.
+This document provides comprehensive technical details about the Aetherwing drone simulator's architecture, including the ProAudioSystem, Betaflight Rates, combined input mode, and all implementation details.
 
 ---
 
-## Inhoudsopgave
+## Table of Contents
 
-1. [Systeemoverzicht](#1-systeemoverzicht)
-2. [Bestandsstructuur](#2-bestandsstructuur)
-3. [Core Systems](#3-core-systems)
-4. [State Management](#4-state-management)
+1. [System Overview](#1-system-overview)
+2. [Input System (Combined Mode)](#2-input-system-combined-mode)
+3. [ProAudioSystem (Multi-Layer Audio)](#3-proaudiosystem-multi-layer-audio)
+4. [Betaflight Rates System](#4-betaflight-rates-system)
 5. [Physics Engine](#5-physics-engine)
-6. [Input System](#6-input-system)
-7. [Game Systems](#7-game-systems)
-8. [Rendering Pipeline](#8-rendering-pipeline)
-9. [Audio System](#9-audio-system)
-10. [UI Components](#10-ui-components)
-11. [Data Types](#11-data-types)
-12. [Configuration Constants](#12-configuration-constants)
-13. [Game Loop](#13-game-loop)
-14. [Performance Considerations](#14-performance-considerations)
-15. [Extensibility Guide](#15-extensibility-guide)
+6. [State Management](#6-state-management)
+7. [Rendering Pipeline](#7-rendering-pipeline)
+8. [Game Loop](#8-game-loop)
+9. [File Reference](#9-file-reference)
+10. [Common Tasks](#10-common-tasks)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
-## 1. Systeemoverzicht
+## 1. System Overview
 
 ### 1.1 High-Level Architecture
 
@@ -49,47 +45,50 @@ Dit document beschrijft de volledige technische architectuur van de Aetherwing D
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         PRESENTATION LAYER                          │   │
+│  │                         INPUT LAYER                                 │   │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │   │
-│  │  │ React UI │  │ Three.js │  │ CSS      │  │ React Three Fiber│   │   │
-│  │  │ Components│  │ 3D Scene │  │ Modules  │  │ (Bridge)         │   │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                          LOGIC LAYER                                │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │   │
-│  │  │ Game Manager │  │ Camera       │  │ Game Systems             │  │   │
-│  │  │ (Hook)       │  │ Controller   │  │ (Tutorial, Mission, Audio)│  │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                         STATE LAYER                                 │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐   │   │
-│  │  │ Game     │  │ Input    │  │ Settings │  │ Progress         │   │   │
-│  │  │ Store    │  │ Store    │  │ Store    │  │ Store            │   │   │
-│  │  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│                                    ▼                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │                        SIMULATION LAYER                             │   │
-│  │  ┌──────────────────────────────────────────────────────────────┐  │   │
-│  │  │                    PHYSICS ENGINE (500Hz)                     │  │   │
-│  │  │   Thrust → Torque → Forces → Integration → State Update      │  │   │
-│  │  └──────────────────────────────────────────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+│  │  │ Keyboard │  │  Mouse   │  │ Gamepad  │  │ RC Transmitter   │   │   │
+│  │  │  WASD    │  │ Velocity │  │  Analog  │  │ (via Gamepad API)│   │   │
+│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────────┬─────────┘   │   │
+│  │       │             │             │                  │            │   │
+│  │       └─────────────┴─────────────┴──────────────────┘            │   │
+│  │                              │                                    │   │
+│  │                    ┌─────────▼─────────┐                          │   │
+│  │                    │ COMBINED INPUT    │                          │   │
+│  │                    │ All inputs blend  │                          │   │
+│  │                    │ together seamlessly│                         │   │
+│  │                    └─────────┬─────────┘                          │   │
+│  └──────────────────────────────┼────────────────────────────────────┘   │
+│                                 │                                        │
+│  ┌──────────────────────────────▼────────────────────────────────────┐   │
+│  │                      PROCESSING LAYER                             │   │
+│  │                                                                   │   │
+│  │  ┌─────────────────┐    ┌─────────────────┐    ┌───────────────┐  │   │
+│  │  │ Betaflight      │    │ Physics Engine  │    │ Game Manager  │  │   │
+│  │  │ Rates           │───►│ (500Hz)         │───►│ (Coordinator) │  │   │
+│  │  │ Calculator      │    │ 4 substeps/frame│    │               │  │   │
+│  │  └─────────────────┘    └─────────────────┘    └───────────────┘  │   │
+│  │                                                                   │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│                                 │                                        │
+│  ┌──────────────────────────────▼────────────────────────────────────┐   │
+│  │                       OUTPUT LAYER                                │   │
+│  │                                                                   │   │
+│  │  ┌─────────────────┐    ┌─────────────────┐    ┌───────────────┐  │   │
+│  │  │ 3D Rendering    │    │ ProAudioSystem  │    │ UI/HUD        │  │   │
+│  │  │ React Three     │    │ Multi-layer     │    │ React         │  │   │
+│  │  │ Fiber + Three.js│    │ Audio Synthesis │    │ Components    │  │   │
+│  │  └─────────────────┘    └─────────────────┘    └───────────────┘  │   │
+│  │                                                                   │   │
+│  └───────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Technologie Stack
+### 1.2 Technology Stack
 
-| Component | Technologie | Versie | Doel |
-|-----------|-------------|--------|------|
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
 | **Framework** | React | 18.2 | UI Component Model |
 | **3D Engine** | Three.js | 0.160 | WebGL Rendering |
 | **3D Bridge** | React Three Fiber | 8.15 | Declarative 3D |
@@ -97,376 +96,484 @@ Dit document beschrijft de volledige technische architectuur van de Aetherwing D
 | **Build** | Vite | 5.0 | Development & Build |
 | **Language** | TypeScript | 5.3 | Type Safety |
 | **Desktop** | Electron | 28.0 | Native App |
-| **Testing** | Vitest | 1.0 | Unit Testing |
-| **Audio** | Web Audio API | Native | Sound Synthesis |
+| **Testing** | Vitest | 1.0 | Unit Testing (104+ tests) |
+| **Audio** | Web Audio API | Native | Multi-layer Synthesis |
 
 ---
 
-## 2. Bestandsstructuur
+## 2. Input System (Combined Mode)
 
-### 2.1 Complete File Tree
+### 2.1 Combined Input Architecture
 
-```
-DRONESIMULATOR/
-│
-├── 📁 src/
-│   │
-│   ├── 📁 renderer/                      # Hoofdapplicatie code
-│   │   │
-│   │   ├── 📁 core/                      # Core engine componenten
-│   │   │   ├── PhysicsEngine.ts          # [477 lines] Quadcopter physics
-│   │   │   └── PhysicsEngine.test.ts     # [248 lines] Physics tests
-│   │   │
-│   │   ├── 📁 store/                     # Zustand state stores
-│   │   │   ├── gameStore.ts              # [168 lines] Game state
-│   │   │   ├── inputStore.ts             # [385 lines] Input handling
-│   │   │   ├── settingsStore.ts          # [136 lines] Settings (persisted)
-│   │   │   └── progressStore.ts          # [98 lines] Player progress
-│   │   │
-│   │   ├── 📁 systems/                   # Game subsystems
-│   │   │   ├── TutorialSystem.ts         # [410 lines] Training system
-│   │   │   ├── MissionSystem.ts          # [399 lines] Mission management
-│   │   │   └── AudioSystem.ts            # [402 lines] Procedural audio
-│   │   │
-│   │   ├── 📁 hooks/                     # Custom React hooks
-│   │   │   ├── useGameManager.ts         # [176 lines] Game loop coordinator
-│   │   │   └── useCameraController.ts    # [203 lines] Camera modes
-│   │   │
-│   │   ├── 📁 components/                # 3D React components
-│   │   │   ├── DroneModel.tsx            # [230 lines] Quadcopter mesh
-│   │   │   ├── Terrain.tsx               # [312 lines] Procedural terrain
-│   │   │   ├── Environment.tsx           # [145 lines] Sky & lighting
-│   │   │   ├── ParticleEffects.tsx       # [198 lines] Thrust particles
-│   │   │   └── PostProcessingEffects.tsx # [67 lines] Visual effects
-│   │   │
-│   │   ├── 📁 scenes/                    # 3D scene compositions
-│   │   │   ├── GameScene.tsx             # [456 lines] Main scene
-│   │   │   └── Drone.tsx                 # [178 lines] Drone scene wrapper
-│   │   │
-│   │   ├── 📁 ui/                        # 2D UI components
-│   │   │   ├── MainMenu.tsx              # [156 lines] Start menu
-│   │   │   ├── HUD.tsx                   # [142 lines] Flight telemetry
-│   │   │   ├── EnhancedHUD.tsx           # [198 lines] Advanced HUD
-│   │   │   ├── SettingsPanel.tsx         # [423 lines] Settings UI
-│   │   │   ├── PauseMenu.tsx             # [45 lines] Pause screen
-│   │   │   ├── TutorialOverlay.tsx       # [112 lines] Tutorial UI
-│   │   │   ├── MissionHUD.tsx            # [156 lines] Mission display
-│   │   │   ├── ControlsHint.tsx          # [98 lines] Control hints
-│   │   │   └── LoadingScreen.tsx         # [23 lines] Loading indicator
-│   │   │
-│   │   ├── 📁 audio/                     # Enhanced audio
-│   │   │   └── EnhancedAudioSystem.ts    # [345 lines] Advanced audio
-│   │   │
-│   │   ├── App.tsx                       # [144 lines] Root component
-│   │   └── main.tsx                      # [12 lines] Entry point
-│   │
-│   ├── 📁 shared/                        # Gedeelde code
-│   │   ├── types.ts                      # [255 lines] TypeScript types
-│   │   ├── types.test.ts                 # [89 lines] Type tests
-│   │   ├── constants.ts                  # [193 lines] Configuration
-│   │   └── constants.test.ts             # [76 lines] Constants tests
-│   │
-│   ├── 📁 test/                          # Test utilities
-│   │   └── setup.ts                      # [34 lines] Test config
-│   │
-│   └── vite-env.d.ts                     # Vite type declarations
-│
-├── 📁 node_modules/                      # Dependencies
-│
-├── 📄 index.html                         # HTML entry point
-├── 📄 package.json                       # Dependencies & scripts
-├── 📄 package-lock.json                  # Lock file
-├── 📄 tsconfig.json                      # TypeScript config
-├── 📄 tsconfig.node.json                 # Node TypeScript config
-├── 📄 vite.config.ts                     # Vite configuration
-├── 📄 vitest.config.ts                   # Vitest configuration
-├── 📄 .eslintrc.cjs                      # ESLint rules
-├── 📄 .prettierrc                        # Prettier config
-├── 📄 .gitignore                         # Git ignore rules
-├── 📄 README.md                          # Project documentation
-├── 📄 CONTEXT.md                         # Dit bestand
-└── 📄 CLAUDE.md                          # Claude AI context
-```
-
-### 2.2 Module Dependencies
-
-```
-                           App.tsx
-                              │
-              ┌───────────────┼───────────────┐
-              │               │               │
-              ▼               ▼               ▼
-         GameScene.tsx   UI Components   Zustand Stores
-              │               │               │
-    ┌─────────┼─────────┐     │     ┌─────────┼─────────┐
-    │         │         │     │     │         │         │
-    ▼         ▼         ▼     │     ▼         ▼         ▼
-DroneModel Terrain  Environment│  gameStore inputStore settingsStore
-    │         │         │     │     │         │         │
-    └─────────┴─────────┴─────┼─────┴─────────┴─────────┘
-                              │
-                              ▼
-                    shared/types.ts
-                    shared/constants.ts
-```
-
----
-
-## 3. Core Systems
-
-### 3.1 System Initialization Flow
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        APPLICATION STARTUP SEQUENCE                         │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  1. main.tsx                                                                │
-│     └── ReactDOM.createRoot()                                               │
-│         └── <App />                                                         │
-│                                                                             │
-│  2. App.tsx mounts                                                          │
-│     ├── useEffect: inputStore.initialize()                                  │
-│     │   └── Register keyboard, mouse, gamepad listeners                     │
-│     │                                                                       │
-│     ├── useEffect: Load settings from localStorage                          │
-│     │   └── settingsStore.hydrate()                                         │
-│     │                                                                       │
-│     └── Render conditional UI based on currentScreen                        │
-│                                                                             │
-│  3. User clicks "Start Game" (freePlay/tutorial/mission)                    │
-│     └── gameStore.startGame({ mode, missionId? })                           │
-│         └── setScreen('freePlay' | 'tutorial' | 'mission')                  │
-│                                                                             │
-│  4. GameScene.tsx mounts (inside React Three Fiber Canvas)                  │
-│     ├── useGameManager() hook initializes:                                  │
-│     │   ├── PhysicsEngine instance                                          │
-│     │   ├── TutorialSystem instance (if tutorial mode)                      │
-│     │   ├── MissionSystem instance (if mission mode)                        │
-│     │   └── AudioSystem instance                                            │
-│     │                                                                       │
-│     └── useFrame() starts game loop (60 FPS)                                │
-│                                                                             │
-│  5. Game Loop Active                                                        │
-│     └── See Section 13: Game Loop                                           │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 3.2 System Communication
-
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  InputStore  │────>│ GameManager  │────>│ PhysicsEngine│
-│              │     │   (Hook)     │     │              │
-│ - keyboard   │     │              │     │ - position   │
-│ - gamepad    │     │ - update()   │     │ - velocity   │
-│ - normalized │     │ - reset()    │     │ - rotation   │
-└──────────────┘     └──────────────┘     └──────────────┘
-       │                    │                    │
-       │                    ▼                    │
-       │           ┌──────────────┐              │
-       │           │  GameStore   │<─────────────┘
-       │           │              │
-       │           │ - droneState │
-       │           │ - score      │
-       │           │ - screen     │
-       │           └──────────────┘
-       │                    │
-       ▼                    ▼
-┌──────────────┐     ┌──────────────┐
-│ TutorialSys  │     │ MissionSys   │
-│              │     │              │
-│ - tasks      │     │ - objectives │
-│ - progress   │     │ - scoring    │
-└──────────────┘     └──────────────┘
-```
-
----
-
-## 4. State Management
-
-### 4.1 Zustand Store Architecture
+The input system uses **Combined Input Mode** where all input sources work simultaneously:
 
 ```typescript
-// Vier aparte stores voor separation of concerns
+// src/renderer/store/inputStore.ts
 
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              ZUSTAND STORES                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ gameStore.ts - Game State Management                                │   │
-│  ├─────────────────────────────────────────────────────────────────────┤   │
-│  │ State:                                                              │   │
-│  │   currentScreen: GameScreen        // 'mainMenu' | 'freePlay' | ... │   │
-│  │   previousScreens: GameScreen[]    // Navigation history            │   │
-│  │   isPlaying: boolean               // Game active flag              │   │
-│  │   isPaused: boolean                // Pause state                   │   │
-│  │   gameTime: number                 // Elapsed time (seconds)        │   │
-│  │   score: number                    // Current score                 │   │
-│  │   comboMultiplier: number          // Score multiplier (1.0 - 2.0)  │   │
-│  │   drone: DroneState                // Full drone state              │   │
-│  │   activeMission: string | null     // Current mission ID            │   │
-│  │                                                                     │   │
-│  │ Actions:                                                            │   │
-│  │   setScreen(screen)                // Navigate to screen            │   │
-│  │   goBack()                         // Return to previous screen     │   │
-│  │   startGame(options)               // Begin gameplay                │   │
-│  │   pauseGame() / resumeGame()       // Pause control                 │   │
-│  │   endGame()                        // Return to menu                │   │
-│  │   updateDrone(partial)             // Update drone state            │   │
-│  │   setFlightMode(mode)              // Change flight mode            │   │
-│  │   toggleArm()                      // Arm/disarm drone              │   │
-│  │   addScore(points)                 // Add to score                  │   │
-│  │   handleCrash()                    // Process crash event           │   │
-│  │   tick(dt)                         // Update game time              │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ inputStore.ts - Input Handling                                      │   │
-│  ├─────────────────────────────────────────────────────────────────────┤   │
-│  │ State:                                                              │   │
-│  │   keys: Map<string, KeyState>      // Keyboard key states           │   │
-│  │   mouse: MouseState                // Mouse position/buttons        │   │
-│  │   gamepad: GamepadState | null     // Connected gamepad             │   │
-│  │   config: InputConfig              // Sensitivity, deadzone, etc.   │   │
-│  │   activeSource: InputSource        // Current input method          │   │
-│  │   normalized: NormalizedInput      // Processed output              │   │
-│  │                                                                     │   │
-│  │ Actions:                                                            │   │
-│  │   initialize()                     // Setup event listeners         │   │
-│  │   cleanup()                        // Remove event listeners        │   │
-│  │   update()                         // Poll inputs each frame        │   │
-│  │   setConfig(config)                // Update input config           │   │
-│  │   calculateNormalizedInput()       // Process raw → normalized      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ settingsStore.ts - Persistent Settings                              │   │
-│  ├─────────────────────────────────────────────────────────────────────┤   │
-│  │ State:                                                              │   │
-│  │   graphics: GraphicsSettings       // Resolution, quality, etc.     │   │
-│  │   audio: AudioSettings             // Volume levels                 │   │
-│  │   controls: ControlSettings        // Key bindings, sensitivity     │   │
-│  │   accessibility: AccessibilitySettings // A11y options              │   │
-│  │                                                                     │   │
-│  │ Persistence:                                                        │   │
-│  │   - Automatically saved to localStorage                             │   │
-│  │   - Loaded on app startup                                           │   │
-│  │   - Key: 'aetherwing-settings'                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ progressStore.ts - Player Progression                               │   │
-│  ├─────────────────────────────────────────────────────────────────────┤   │
-│  │ State:                                                              │   │
-│  │   level: number                    // Player level                  │   │
-│  │   xp: number                       // Experience points             │   │
-│  │   tutorialProgress: Record<...>    // Completed tutorials           │   │
-│  │   completedMissions: string[]      // Finished mission IDs          │   │
-│  │   achievements: string[]           // Unlocked achievements         │   │
-│  │   statistics: PlayerStatistics     // Flight stats                  │   │
-│  │                                                                     │   │
-│  │ Persistence:                                                        │   │
-│  │   - Saved to localStorage                                           │   │
-│  │   - Key: 'aetherwing-progress'                                      │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+interface InputState {
+  // Current combined input values
+  input: {
+    throttle: number;  // 0.0 - 1.0
+    yaw: number;       // -1.0 to 1.0
+    pitch: number;     // -1.0 to 1.0
+    roll: number;      // -1.0 to 1.0
+    source: 'keyboard' | 'mouse' | 'gamepad' | 'combined';
+  };
+
+  // Mouse velocity tracking (KEY FEATURE)
+  mouseVelocity: { x: number; y: number };
+  lastMouseMoveTime: number;
+
+  // Combined mode flag
+  combinedInputMode: boolean;  // Always true
+
+  // Keyboard state
+  keys: Map<string, KeyState>;
+
+  // Gamepad state
+  gamepad: {
+    connected: boolean;
+    index: number;
+    axes: number[];
+    buttons: boolean[];
+  };
+}
 ```
 
-### 4.2 Store Selectors
+### 2.2 Mouse Velocity System
+
+The mouse uses a **velocity-based system** with automatic decay:
 
 ```typescript
-// gameStore selectors
-export const selectDronePosition = (state: GameState) => state.drone.position;
-export const selectIsArmed = (state: GameState) => state.drone.isArmed;
-export const selectFlightMode = (state: GameState) => state.drone.flightMode;
+// Key mouse velocity handling code
 
-// Usage in components:
-const position = useGameStore(selectDronePosition);
-const isArmed = useGameStore(selectIsArmed);
+// On mouse move - accumulate velocity
+handleMouseMove(deltaX: number, deltaY: number): void {
+  const sensitivity = 0.002;
+  const newVelocity = {
+    x: this.mouseVelocity.x + deltaX * sensitivity,
+    y: this.mouseVelocity.y + deltaY * sensitivity,
+  };
+
+  // Clamp to prevent extreme values
+  newVelocity.x = Math.max(-1, Math.min(1, newVelocity.x));
+  newVelocity.y = Math.max(-1, Math.min(1, newVelocity.y));
+
+  this.mouseVelocity = newVelocity;
+  this.lastMouseMoveTime = performance.now();
+}
+
+// Each frame - apply decay when mouse not moving
+update(): void {
+  const now = performance.now();
+  const timeSinceMouseMove = now - this.lastMouseMoveTime;
+
+  // Apply decay after 50ms of no movement
+  if (timeSinceMouseMove > 50) {
+    const decayRate = 0.15;  // 15% per frame
+    this.mouseVelocity = {
+      x: this.mouseVelocity.x * (1 - decayRate),
+      y: this.mouseVelocity.y * (1 - decayRate),
+    };
+
+    // Zero out very small values
+    if (Math.abs(this.mouseVelocity.x) < 0.001) this.mouseVelocity.x = 0;
+    if (Math.abs(this.mouseVelocity.y) < 0.001) this.mouseVelocity.y = 0;
+  }
+}
+```
+
+### 2.3 Input Processing Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     INPUT PROCESSING FLOW                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                    RAW INPUT EVENTS                      │   │
+│  │                                                          │   │
+│  │  Keyboard:  keydown/keyup  → keys Map                    │   │
+│  │  Mouse:     mousemove      → mouseVelocity (delta)       │   │
+│  │  Gamepad:   poll each frame → axes[], buttons[]          │   │
+│  │                                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│                              ▼                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   KEYBOARD PROCESSING                    │   │
+│  │                                                          │   │
+│  │  TAP (0-100ms):  15% input (soft start)                  │   │
+│  │  HOLD (100ms+):  Ramp to 100% over 150ms                 │   │
+│  │  RELEASE:        Return to 0% over 50ms                  │   │
+│  │                                                          │   │
+│  │  W/S → pitch (+/-)                                       │   │
+│  │  A/D → roll  (-/+)                                       │   │
+│  │  Q/E → yaw   (-/+)                                       │   │
+│  │  Space/Shift → throttle (+/-)                            │   │
+│  │                                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│                              ▼                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   MOUSE PROCESSING                       │   │
+│  │                                                          │   │
+│  │  Movement creates angular VELOCITY (not position)        │   │
+│  │                                                          │   │
+│  │  On mousemove:                                           │   │
+│  │    mouseVelocity.x += deltaX × sensitivity               │   │
+│  │    mouseVelocity.y += deltaY × sensitivity               │   │
+│  │    lastMouseMoveTime = now                               │   │
+│  │                                                          │   │
+│  │  Each frame (when mouse not moving):                     │   │
+│  │    if (timeSinceMove > 50ms):                            │   │
+│  │      mouseVelocity *= (1 - 0.15)  // 15% decay           │   │
+│  │                                                          │   │
+│  │  mouseVelocity.x → roll                                  │   │
+│  │  mouseVelocity.y → pitch                                 │   │
+│  │  scroll wheel → throttle                                 │   │
+│  │  left click + move → yaw                                 │   │
+│  │                                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                              │                                  │
+│                              ▼                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   COMBINED OUTPUT                        │   │
+│  │                                                          │   │
+│  │  throttle = keyboard.throttle + mouse.throttle           │   │
+│  │             + gamepad.throttle                           │   │
+│  │  yaw   = clamp(keyboard.yaw + mouse.yaw + gamepad.yaw)   │   │
+│  │  pitch = clamp(keyboard.pitch + mouse.pitch + gamepad)   │   │
+│  │  roll  = clamp(keyboard.roll + mouse.roll + gamepad)     │   │
+│  │                                                          │   │
+│  │  All values clamped to valid ranges                      │   │
+│  │  source = 'combined'                                     │   │
+│  │                                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 2.4 Key Bindings
+
+| Key | Action |
+|-----|--------|
+| **W / S** | Pitch forward / backward |
+| **A / D** | Roll left / right |
+| **Q / E** | Yaw left / right |
+| **Space** | Increase throttle |
+| **Shift** | Decrease throttle |
+| **R** | Arm / Disarm motors |
+| **C** | Cycle camera modes |
+| **M** | Toggle background music |
+| **H** | Toggle controls help overlay |
+| **P / Esc** | Pause game |
+
+---
+
+## 3. ProAudioSystem (Multi-Layer Audio)
+
+### 3.1 Complete Audio Signal Chain
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     ProAudioSystem SIGNAL CHAIN                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                         MOTOR 1                                  │    │
+│  │  ┌────────────────┐                                              │    │
+│  │  │ Fundamental    │ Triangle wave │ RPM → Frequency             │    │
+│  │  │ (100% volume)  │               │ f = 150 + (RPM/25000)*450   │    │
+│  │  └───────┬────────┘               │                              │    │
+│  │          │                        │                              │    │
+│  │  ┌───────┴────────┐               │                              │    │
+│  │  │ 2nd Harmonic   │ Sine wave     │ f = fundamental × 2         │    │
+│  │  │ (30% volume)   │               │                              │    │
+│  │  └───────┬────────┘               │                              │    │
+│  │          │                        │                              │    │
+│  │  ┌───────┴────────┐               │                              │    │
+│  │  │ 3rd Harmonic   │ Sine wave     │ f = fundamental × 3         │    │
+│  │  │ (15% volume)   │               │                              │    │
+│  │  └───────┬────────┘               │                              │    │
+│  │          │                        │                              │    │
+│  │  ┌───────┴────────┐               │                              │    │
+│  │  │ 4th Harmonic   │ Sine wave     │ f = fundamental × 4         │    │
+│  │  │ (8% volume)    │               │                              │    │
+│  │  └───────┬────────┘               │                              │    │
+│  │          │                        │                              │    │
+│  │  ┌───────┴────────┐               │                              │    │
+│  │  │ Body Resonance │ Sine wave     │ f = fundamental × 0.5       │    │
+│  │  │ (20% volume)   │ (frame vibe)  │                              │    │
+│  │  └───────┬────────┘               │                              │    │
+│  │          │                        │                              │    │
+│  │          └──────────────────────► Mix ──► StereoPanner (L)       │    │
+│  │                                                │                  │    │
+│  └────────────────────────────────────────────────┼──────────────────┘    │
+│                                                   │                      │
+│  [MOTORS 2, 3, 4 - Same structure with different panning]               │
+│                                                   │                      │
+│                                                   ▼                      │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                       MOTOR MIX BUS                              │    │
+│  │                    (GainNode: motorVolume)                       │    │
+│  └───────────────────────────────┬─────────────────────────────────┘    │
+│                                  │                                       │
+│  ┌───────────────────────────────▼─────────────────────────────────┐    │
+│  │                   DYNAMICS COMPRESSOR                            │    │
+│  │                                                                  │    │
+│  │   threshold: -24 dB    │   Tames motor dynamics                 │    │
+│  │   knee: 30 dB          │   Prevents sudden loud spikes          │    │
+│  │   ratio: 12:1          │                                        │    │
+│  │   attack: 0.003s       │                                        │    │
+│  │   release: 0.25s       │                                        │    │
+│  │                                                                  │    │
+│  └───────────────────────────────┬─────────────────────────────────┘    │
+│                                  │                                       │
+│  ┌───────────────────────────────▼─────────────────────────────────┐    │
+│  │                     HIGH-CUT FILTER                              │    │
+│  │                                                                  │    │
+│  │   type: lowpass        │   Removes harsh high frequencies       │    │
+│  │   frequency: 8000 Hz   │   Smooths the overall sound           │    │
+│  │   Q: 0.7               │                                        │    │
+│  │                                                                  │    │
+│  └───────────────────────────────┬─────────────────────────────────┘    │
+│                                  │                                       │
+│  ┌───────────────────────────────▼─────────────────────────────────┐    │
+│  │                      WARMTH FILTER                               │    │
+│  │                                                                  │    │
+│  │   type: lowshelf       │   Adds body and warmth                 │    │
+│  │   frequency: 300 Hz    │   to the motor sound                   │    │
+│  │   gain: +2 dB          │                                        │    │
+│  │                                                                  │    │
+│  └───────────────────────────────┬─────────────────────────────────┘    │
+│                                  │                                       │
+│  ┌───────────────────────────────▼─────────────────────────────────┐    │
+│  │                    BRICK-WALL LIMITER                            │    │
+│  │                                                                  │    │
+│  │   threshold: -3 dB     │   PREVENTS ALL CLIPPING                │    │
+│  │   knee: 0 dB           │   Hard limiting                        │    │
+│  │   ratio: 20:1          │   Almost infinite ratio                │    │
+│  │   attack: 0.001s       │   Instant attack                       │    │
+│  │   release: 0.1s        │   Quick release                        │    │
+│  │                                                                  │    │
+│  └───────────────────────────────┬─────────────────────────────────┘    │
+│                                  │                                       │
+│  ┌───────────────────────────────▼─────────────────────────────────┐    │
+│  │                       MASTER GAIN                                │    │
+│  │                    (masterVolume: 0.0-1.0)                       │    │
+│  └───────────────────────────────┬─────────────────────────────────┘    │
+│                                  │                                       │
+│                                  ▼                                       │
+│                        AudioContext.destination                          │
+│                              (Speakers)                                  │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Motor Sound Layers
+
+Each of the 4 motors generates 5 audio layers:
+
+| Layer | Waveform | Frequency | Volume | Purpose |
+|-------|----------|-----------|--------|---------|
+| **Fundamental** | Triangle | 150-600Hz (RPM-based) | 100% | Base motor frequency |
+| **2nd Harmonic** | Sine | 2× fundamental | 30% | First overtone |
+| **3rd Harmonic** | Sine | 3× fundamental | 15% | Second overtone |
+| **4th Harmonic** | Sine | 4× fundamental | 8% | Third overtone |
+| **Body Resonance** | Sine | 0.5× fundamental | 20% | Frame vibration |
+
+### 3.3 Motor Audio Update Algorithm
+
+```typescript
+// src/renderer/systems/ProAudioSystem.ts
+
+update(state: AudioUpdateState): void {
+  if (!this.initialized || !this.context) return;
+
+  const { motorRPM, velocity, position, armed, throttle } = state;
+
+  // Update each motor
+  for (let i = 0; i < 4; i++) {
+    const motor = this.motors[i];
+    const rpm = armed ? motorRPM[i] : 0;
+
+    // Calculate base frequency from RPM (150Hz-600Hz range)
+    const baseFreq = 150 + (rpm / 25000) * 450;
+
+    // Calculate volume based on RPM
+    const volume = armed ? Math.min(rpm / 20000, 1) * this.config.motorVolume : 0;
+
+    // Update all oscillators with smooth transitions
+    const timeConstant = 0.02;  // 20ms smoothing
+
+    motor.fundamental.frequency.setTargetAtTime(baseFreq, this.context.currentTime, timeConstant);
+    motor.fundamentalGain.gain.setTargetAtTime(volume, this.context.currentTime, timeConstant);
+
+    motor.harmonic2.frequency.setTargetAtTime(baseFreq * 2, this.context.currentTime, timeConstant);
+    motor.harmonic2Gain.gain.setTargetAtTime(volume * 0.3, this.context.currentTime, timeConstant);
+
+    motor.harmonic3.frequency.setTargetAtTime(baseFreq * 3, this.context.currentTime, timeConstant);
+    motor.harmonic3Gain.gain.setTargetAtTime(volume * 0.15, this.context.currentTime, timeConstant);
+
+    motor.harmonic4.frequency.setTargetAtTime(baseFreq * 4, this.context.currentTime, timeConstant);
+    motor.harmonic4Gain.gain.setTargetAtTime(volume * 0.08, this.context.currentTime, timeConstant);
+
+    motor.bodyResonance.frequency.setTargetAtTime(baseFreq * 0.5, this.context.currentTime, timeConstant);
+    motor.bodyGain.gain.setTargetAtTime(volume * 0.2, this.context.currentTime, timeConstant);
+
+    // Stereo panning: Motors 1,4 left (-0.7), Motors 2,3 right (+0.7)
+    const pan = (i === 0 || i === 3) ? -0.7 : 0.7;
+    motor.panner.pan.setTargetAtTime(pan, this.context.currentTime, timeConstant);
+  }
+
+  // Update wind noise based on velocity
+  const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2);
+  const windVolume = Math.min(speed / 30, 1) * 0.15 * this.config.masterVolume;
+  this.windGain.gain.setTargetAtTime(windVolume, this.context.currentTime, 0.1);
+}
+```
+
+### 3.4 Browser Autoplay Handling
+
+```typescript
+// Auto-resume audio context when suspended due to browser policy
+setupAutoResume(): void {
+  const resumeAudio = (): void => {
+    if (this.context?.state === 'suspended') {
+      this.context.resume().then(() => {
+        console.log('AudioContext resumed successfully');
+      });
+    }
+  };
+
+  // Listen for any user interaction
+  const events = ['click', 'keydown', 'touchstart', 'mousedown', 'pointerdown'];
+
+  events.forEach(event => {
+    window.addEventListener(event, resumeAudio, {
+      passive: true,
+      once: false  // Keep listening
+    });
+  });
+}
+```
+
+### 3.5 Sound Effects
+
+| Effect | Trigger | Description |
+|--------|---------|-------------|
+| **Arm** | R key / motors armed | Rising tone sequence |
+| **Disarm** | Motors disarmed | Falling tone sequence |
+| **Checkpoint** | Gate passed | Success chime |
+| **Crash** | Collision | Impact noise with decay |
+| **Warning** | Low battery/altitude | Alert beep |
+| **Success** | Race completed | Victory fanfare |
+| **Fail** | Crash or timeout | Failure tone |
+| **Mode Change** | Flight mode change | Mode indicator |
+
+---
+
+## 4. Betaflight Rates System
+
+### 4.1 Rate Calculation Algorithm
+
+```typescript
+// src/renderer/systems/BetaflightRates.ts
+
+interface AxisRates {
+  rcRate: number;    // Center sensitivity (°/s)
+  maxRate: number;   // Maximum rate at full stick (°/s)
+  expo: number;      // Expo curve (0-1)
+}
+
+interface RateProfile {
+  roll: AxisRates;
+  pitch: AxisRates;
+  yaw: AxisRates;
+}
+
+class BetaflightRates {
+  /**
+   * Betaflight "Actual Rates" formula:
+   *
+   * rate = rcRate × (1 + expo × stick²) + maxRate × stick³
+   *
+   * This provides:
+   * - Linear response at center (rcRate dominates)
+   * - Cubic ramp to max rate at extremes
+   * - Expo adjusts the curve shape
+   */
+  calculateAxisRate(stick: number, axis: AxisRates): number {
+    const absStick = Math.abs(stick);
+    const sign = Math.sign(stick);
+
+    const rate = axis.rcRate * (1 + axis.expo * absStick * absStick)
+               + axis.maxRate * absStick * absStick * absStick;
+
+    return rate * sign;
+  }
+
+  calculate(input: { roll: number; pitch: number; yaw: number }): {
+    roll: number;
+    pitch: number;
+    yaw: number;
+  } {
+    return {
+      roll: this.calculateAxisRate(input.roll, this.profile.roll),
+      pitch: this.calculateAxisRate(input.pitch, this.profile.pitch),
+      yaw: this.calculateAxisRate(input.yaw, this.profile.yaw),
+    };
+  }
+}
+```
+
+### 4.2 Rate Presets
+
+| Preset | Center | Max Rate | Expo | Best For |
+|--------|--------|----------|------|----------|
+| **Freestyle** | 200°/s | 850°/s | 0.4 | Tricks, acrobatic flying |
+| **Racing** | 250°/s | 1000°/s | 0.2 | Speed, precision turns |
+| **Cinematic** | 100°/s | 400°/s | 0.6 | Smooth video, slow movements |
+| **Beginner** | 120°/s | 500°/s | 0.5 | Learning, forgiving control |
+
+### 4.3 Rate Curve Visualization
+
+```
+Rotation Rate (°/s)
+        ^
+  1000 ─┤                                    ╭─── Racing
+        │                                 ╭──╯
+   850 ─┤                              ╭──╯←── Freestyle
+        │                           ╭──╯
+   600 ─┤                        ╭──╯
+        │                     ╭──╯
+   400 ─┤               ╭─────╯←── Cinematic
+        │          ╭────╯
+   200 ─┤     ╭────╯
+        │ ╭───╯
+     0 ─┼────────────────────────────────────────────►
+        0    0.2   0.4   0.6   0.8   1.0    Stick Position
 ```
 
 ---
 
 ## 5. Physics Engine
 
-### 5.1 Physics Engine Architecture
+### 5.1 Physics Configuration
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         PHYSICS ENGINE (500Hz)                              │
-│                     src/renderer/core/PhysicsEngine.ts                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ CONFIGURATION (PhysicsConfig)                                       │   │
-│  │                                                                     │   │
-│  │   mass: 0.5 kg              // Drone mass                           │   │
-│  │   armLength: 0.15 m         // Motor arm length                     │   │
-│  │   motorKv: 2400             // Motor Kv rating                      │   │
-│  │   propDiameter: 0.127 m     // 5" propeller                         │   │
-│  │   thrustCoefficient: 0.1    // Ct value                             │   │
-│  │   torqueCoefficient: 0.01   // Cq value                             │   │
-│  │   dragCoefficient: 0.5      // Cd value                             │   │
-│  │   motorResponseRate: 0.1    // Motor RPM change rate                │   │
-│  │   groundEffectHeight: 1.0   // Ground effect range                  │   │
-│  │   groundEffectStrength: 0.3 // Ground effect multiplier             │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ STATE (PhysicsState)                                                │   │
-│  │                                                                     │   │
-│  │   position: Vector3         // World position (meters)              │   │
-│  │   velocity: Vector3         // Linear velocity (m/s)                │   │
-│  │   rotation: Quaternion      // Orientation quaternion               │   │
-│  │   angularVelocity: Vector3  // Angular velocity (rad/s)             │   │
-│  │   motorRPM: [n, n, n, n]    // Individual motor RPMs                │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ UPDATE CYCLE                                                        │   │
-│  │                                                                     │   │
-│  │   update(input, dt) {                                               │   │
-│  │     1. calculateMotorRPMs(input)                                    │   │
-│  │        └── Base RPM from throttle + differential for control        │   │
-│  │                                                                     │   │
-│  │     2. calculateTotalThrust()                                       │   │
-│  │        └── T = Ct × ρ × n² × D⁴ for each motor                      │   │
-│  │                                                                     │   │
-│  │     3. calculateTorque()                                            │   │
-│  │        └── Differential thrust creates torque on each axis          │   │
-│  │                                                                     │   │
-│  │     4. applyGravity()                                               │   │
-│  │        └── F = m × g (downward)                                     │   │
-│  │                                                                     │   │
-│  │     5. applyDrag()                                                  │   │
-│  │        └── F = 0.5 × Cd × ρ × A × v²                                │   │
-│  │                                                                     │   │
-│  │     6. applyGroundEffect()                                          │   │
-│  │        └── +30% thrust when altitude < 1m                           │   │
-│  │                                                                     │   │
-│  │     7. integrateLinear(dt)                                          │   │
-│  │        └── position += velocity × dt                                │   │
-│  │        └── velocity += acceleration × dt                            │   │
-│  │                                                                     │   │
-│  │     8. integrateAngular(dt)                                         │   │
-│  │        └── Update quaternion from angular velocity                  │   │
-│  │        └── Apply angular drag (0.95 multiplier)                     │   │
-│  │                                                                     │   │
-│  │     9. enforceConstraints()                                         │   │
-│  │        └── Ground collision (y >= 0)                                │   │
-│  │        └── Altitude limit (y <= 500)                                │   │
-│  │        └── Boundary limits (|x|, |z| <= 500)                        │   │
-│  │   }                                                                 │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```typescript
+const PHYSICS = {
+  TIMESTEP: 1 / 500,           // 500Hz physics
+  GRAVITY: 9.81,               // m/s²
+  AIR_DENSITY: 1.225,          // kg/m³
+  MAX_ALTITUDE: 500,           // meters
+  GROUND_EFFECT_HEIGHT: 1.0,   // meters
+  GROUND_EFFECT_STRENGTH: 0.3, // 30% thrust boost
+};
 ```
 
-### 5.2 Motor Layout
+### 5.2 Motor Layout (X Configuration)
 
 ```
               FRONT
@@ -476,11 +583,7 @@ const isArmed = useGameStore(selectIsArmed);
        ╲        │        ╱
         ╲       │       ╱
          ╲      │      ╱
-          ╲     │     ╱
-           ╲    │    ╱
-            ────┼────
-           ╱    │    ╲
-          ╱     │     ╲
+          ────┼────
          ╱      │      ╲
         ╱       │       ╲
        ╱        │        ╲
@@ -495,914 +598,333 @@ Roll Right:  M1↑, M4↑, M2↓, M3↓
 Roll Left:   M1↓, M4↓, M2↑, M3↑
 Pitch Fwd:   M1↓, M2↓, M3↑, M4↑
 Pitch Back:  M1↑, M2↑, M3↓, M4↓
-Yaw Right:   M1↑, M3↑, M2↓, M4↓ (CW motors up)
-Yaw Left:    M1↓, M3↓, M2↑, M4↑ (CCW motors up)
+Yaw Right:   M1↑, M3↑, M2↓, M4↓
+Yaw Left:    M1↓, M3↓, M2↑, M4↑
 ```
 
 ### 5.3 Physics Formulas
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           PHYSICS FORMULAS                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  THRUST (per motor):                                                        │
-│  ───────────────────                                                        │
-│    T = Ct × ρ × n² × D⁴                                                     │
-│                                                                             │
-│    Where:                                                                   │
-│      Ct = Thrust coefficient (0.1)                                          │
-│      ρ  = Air density (1.225 kg/m³)                                         │
-│      n  = Motor RPM / 60 (revolutions per second)                           │
-│      D  = Propeller diameter (0.127 m for 5")                               │
-│                                                                             │
-│  TORQUE (reaction):                                                         │
-│  ──────────────────                                                         │
-│    τ = Cq × ρ × n² × D⁵                                                     │
-│                                                                             │
-│  HOVER THRUST:                                                              │
-│  ─────────────                                                              │
-│    T_hover = m × g / 4                                                      │
-│    T_hover = 0.5 × 9.81 / 4 = 1.226 N per motor                            │
-│                                                                             │
-│  DRAG:                                                                      │
-│  ─────                                                                      │
-│    F_drag = 0.5 × Cd × ρ × A × v²                                          │
-│                                                                             │
-│    Where:                                                                   │
-│      Cd = Drag coefficient (0.5)                                            │
-│      A  = Reference area (0.04 m²)                                          │
-│      v  = Velocity magnitude                                                │
-│                                                                             │
-│  GROUND EFFECT:                                                             │
-│  ──────────────                                                             │
-│    T_actual = T × (1 + GE_strength × (1 - altitude / GE_height))           │
-│                                                                             │
-│    Active when altitude < GE_height (1.0 m)                                 │
-│    Maximum +30% thrust at ground level                                      │
-│                                                                             │
-│  ANGULAR INTEGRATION (Quaternion):                                          │
-│  ─────────────────────────────────                                          │
-│    q' = q + 0.5 × q × ω × dt                                               │
-│    q  = normalize(q')                                                       │
-│                                                                             │
-│    Where:                                                                   │
-│      q  = Current orientation quaternion                                    │
-│      ω  = Angular velocity as quaternion [0, ωx, ωy, ωz]                   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+THRUST (per motor):
+  T = Ct × ρ × n² × D⁴
+
+  Where:
+    Ct = Thrust coefficient (0.1)
+    ρ  = Air density (1.225 kg/m³)
+    n  = Motor RPM / 60 (revolutions per second)
+    D  = Propeller diameter (0.127 m for 5")
+
+DRAG:
+  F = 0.5 × Cd × ρ × A × v²
+
+  Where:
+    Cd = Drag coefficient (0.5)
+    A  = Reference area (0.04 m²)
+    v  = Velocity magnitude
+
+GROUND EFFECT:
+  T_actual = T × (1 + 0.3 × (1 - altitude / 1.0))
+  Active when altitude < 1.0m
 ```
+
+### 5.4 Drone Presets
+
+| Preset | Mass | Thrust | Roll Rate | Pitch Rate | Yaw Rate |
+|--------|------|--------|-----------|------------|----------|
+| **Beginner** | 0.50 kg | 1.2× | 200°/s | 200°/s | 150°/s |
+| **Intermediate** | 0.40 kg | 1.5× | 400°/s | 400°/s | 250°/s |
+| **Racing** | 0.35 kg | 2.0× | 600°/s | 600°/s | 400°/s |
+| **Freestyle** | 0.45 kg | 1.8× | 500°/s | 500°/s | 350°/s |
 
 ---
 
-## 6. Input System
+## 6. State Management
 
-### 6.1 Input Processing Pipeline
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        INPUT PROCESSING PIPELINE                            │
-│                      src/renderer/store/inputStore.ts                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  RAW INPUT                                                                  │
-│  ─────────                                                                  │
-│    Keyboard: keydown/keyup events → keys Map                               │
-│    Mouse: mousemove, wheel events → mouse state                            │
-│    Gamepad: navigator.getGamepads() polling → gamepad state                │
-│                                                                             │
-│          │                                                                  │
-│          ▼                                                                  │
-│                                                                             │
-│  ANALOG SIMULATION (for keyboard)                                          │
-│  ─────────────────────────────────                                          │
-│                                                                             │
-│    Key State Machine:                                                       │
-│    ┌─────────┐  press  ┌─────────┐  hold   ┌─────────┐                     │
-│    │  IDLE   │ ──────> │ PRESSED │ ──────> │ RAMPING │                     │
-│    │ val=0   │         │ val=0.15│         │ val→1.0 │                     │
-│    └─────────┘         └─────────┘         └─────────┘                     │
-│         ▲                                        │                          │
-│         │  release (decay)                       │                          │
-│         └────────────────────────────────────────┘                          │
-│                                                                             │
-│    Timing:                                                                  │
-│      TAP_DURATION = 100ms    (initial press value: 15%)                    │
-│      HOLD_RAMP_SPEED = 150ms (time to reach 100%)                          │
-│      RELEASE_DECAY = 50ms    (time to return to 0%)                        │
-│                                                                             │
-│          │                                                                  │
-│          ▼                                                                  │
-│                                                                             │
-│  DEADZONE APPLICATION                                                       │
-│  ────────────────────                                                       │
-│                                                                             │
-│    if (|value| < deadzone) return 0                                        │
-│    else return (value - deadzone) / (1 - deadzone)                         │
-│                                                                             │
-│    Default deadzone: 0.02 (keyboard), 0.05 (gamepad)                       │
-│                                                                             │
-│          │                                                                  │
-│          ▼                                                                  │
-│                                                                             │
-│  EXPO CURVE                                                                 │
-│  ──────────                                                                 │
-│                                                                             │
-│    output = (1 - expo) × input + expo × input³                             │
-│                                                                             │
-│    expo = 0:   Linear response                                              │
-│    expo = 0.5: Moderate curve (default)                                    │
-│    expo = 1:   Maximum curve (fine control at center)                      │
-│                                                                             │
-│          │                                                                  │
-│          ▼                                                                  │
-│                                                                             │
-│  SENSITIVITY SCALING                                                        │
-│  ───────────────────                                                        │
-│                                                                             │
-│    output = input × sensitivity                                            │
-│                                                                             │
-│    Range: 0.3 to 3.0 (default: 1.0)                                        │
-│                                                                             │
-│          │                                                                  │
-│          ▼                                                                  │
-│                                                                             │
-│  NORMALIZED OUTPUT                                                          │
-│  ─────────────────                                                          │
-│                                                                             │
-│    NormalizedInput {                                                        │
-│      throttle: 0 to 1                                                       │
-│      yaw:      -1 to 1                                                      │
-│      pitch:    -1 to 1                                                      │
-│      roll:     -1 to 1                                                      │
-│      aux1:     boolean (arm)                                                │
-│      aux2:     number (flight mode 0-2)                                    │
-│      aux3:     number (camera tilt -1 to 1)                                │
-│      source:   InputSource                                                  │
-│      timestamp: number                                                      │
-│    }                                                                        │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 6.2 Key Bindings
+### 6.1 Zustand Stores
 
 ```typescript
-// src/shared/constants.ts
+// Game Store - Core game state
+interface GameStore {
+  currentScreen: 'menu' | 'game' | 'pause' | 'settings';
+  isPlaying: boolean;
+  isPaused: boolean;
 
-export const DEFAULT_KEY_BINDINGS: KeyBindings = {
-  // Movement (pitch/roll)
-  moveUp:      ['w', 'ArrowUp'],
-  moveDown:    ['s', 'ArrowDown'],
-  moveLeft:    ['a', 'ArrowLeft'],
-  moveRight:   ['d', 'ArrowRight'],
+  drone: {
+    position: Vector3;
+    velocity: Vector3;
+    rotation: Euler;
+    motorRPM: [number, number, number, number];
+    isArmed: boolean;
+    batteryLevel: number;
+    flightMode: 'angle' | 'horizon' | 'acro';
+  };
 
-  // Throttle
-  thrustUp:    ['Space'],
-  thrustDown:  ['Shift'],
-
-  // Yaw
-  yawLeft:     ['q'],
-  yawRight:    ['e'],
-
-  // Arm state
-  arm:         ['r'],
-  disarm:      ['t'],
-
-  // Flight modes
-  modeAngle:   ['1'],
-  modeHorizon: ['2'],
-  modeAcro:    ['3'],
-
-  // Camera
-  cameraUp:    ['ArrowUp'],
-  cameraDown:  ['ArrowDown'],
-
-  // Menu
-  pause:       ['p', 'Escape'],
-};
-```
-
----
-
-## 7. Game Systems
-
-### 7.1 Tutorial System
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            TUTORIAL SYSTEM                                  │
-│                   src/renderer/systems/TutorialSystem.ts                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  LEVELS & TASKS                                                             │
-│  ──────────────                                                             │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ NOVICE (3 tasks)                                                    │   │
-│  │   ├── throttle_control: Reach 5m altitude                           │   │
-│  │   ├── hover_practice: Maintain altitude ±0.5m for 3 seconds         │   │
-│  │   └── precision_landing: Land within 0.5m of target                 │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ BEGINNER (4 tasks)                                                  │   │
-│  │   ├── yaw_rotation: Complete 360° rotation                          │   │
-│  │   ├── forward_backward: Move 10m forward, then back                 │   │
-│  │   ├── strafe_movement: Move 10m left, then right                    │   │
-│  │   └── four_point_nav: Visit 4 waypoints in sequence                 │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ INTERMEDIATE (3 tasks)                                              │   │
-│  │   ├── banking_turn: Complete coordinated turn                       │   │
-│  │   ├── figure_eight: Fly figure-8 pattern                            │   │
-│  │   └── precision_hover_box: Hover within 1m cube for 5 seconds       │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ ADVANCED (2 tasks)                                                  │   │
-│  │   ├── acro_intro: Fly in acro mode for 30 seconds                   │   │
-│  │   └── first_flip: Complete a flip maneuver                          │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │ EXPERT (2 tasks)                                                    │   │
-│  │   ├── power_loop: Complete a power loop                             │   │
-│  │   └── split_s: Execute split-S maneuver                             │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  TASK INTERFACE                                                            │
-│  ──────────────                                                             │
-│                                                                             │
-│    interface TutorialTask {                                                │
-│      id: string;                                                           │
-│      name: string;                                                         │
-│      description: string;                                                  │
-│      instructions: string[];                                               │
-│      targetAltitude?: number;                                              │
-│      targetPosition?: Vector3;                                             │
-│      checkCompletion: (drone: DroneState, time: number) => boolean;        │
-│    }                                                                       │
-│                                                                             │
-│  PROGRESS TRACKING                                                         │
-│  ─────────────────                                                          │
-│                                                                             │
-│    interface TutorialProgress {                                            │
-│      currentLevel: TutorialLevel;                                          │
-│      currentTaskIndex: number;                                             │
-│      completionPercentage: number;                                         │
-│      attemptCount: number;                                                 │
-│      completedTasks: string[];                                             │
-│    }                                                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 7.2 Mission System
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            MISSION SYSTEM                                   │
-│                   src/renderer/systems/MissionSystem.ts                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  MISSION TYPES                                                              │
-│  ─────────────                                                              │
-│                                                                             │
-│    timeTrial   - Race through checkpoints                                  │
-│    precision   - Land/hover at precise locations                           │
-│    search      - Find hidden collectibles                                  │
-│    delivery    - Transport items between locations                         │
-│    survival    - Navigate obstacles without crashing                       │
-│    ctf         - Capture and return objectives                             │
-│                                                                             │
-│  OBJECTIVE TYPES                                                            │
-│  ───────────────                                                            │
-│                                                                             │
-│    ┌────────────┬──────────────────────────────────────────────────────┐   │
-│    │ Type       │ Validation                                          │   │
-│    ├────────────┼──────────────────────────────────────────────────────┤   │
-│    │ checkpoint │ Distance to position < radius                        │   │
-│    │ collect    │ Distance < radius AND velocity < 2 m/s               │   │
-│    │ hover      │ Distance < radius AND velocity < 0.5 m/s for 3s      │   │
-│    │ land       │ Distance < radius AND altitude < 0.2m AND v < 0.3    │   │
-│    │ photograph │ Within view cone AND distance < radius               │   │
-│    └────────────┴──────────────────────────────────────────────────────┘   │
-│                                                                             │
-│  SCORING                                                                    │
-│  ───────                                                                    │
-│                                                                             │
-│    Base Score:                                                              │
-│      Objective completion: +1000 points                                    │
-│                                                                             │
-│    Time Bonus:                                                              │
-│      (parTime - actualTime) × 100 points                                   │
-│      Maximum: 5000 points                                                  │
-│                                                                             │
-│    Combo System:                                                            │
-│      Quick successive completions increase multiplier                      │
-│      Base: 1.0x, Max: 2.0x                                                 │
-│      Decay: 0.1 per second without completion                              │
-│                                                                             │
-│    Penalties:                                                               │
-│      Crash: -500 points, reset combo                                       │
-│      Reset: -1000 points                                                   │
-│                                                                             │
-│  MISSION RESULT                                                             │
-│  ──────────────                                                             │
-│                                                                             │
-│    interface MissionResult {                                               │
-│      missionId: string;                                                    │
-│      completed: boolean;                                                   │
-│      time: number;                                                         │
-│      score: number;                                                        │
-│      objectives: { id: string; completed: boolean }[];                     │
-│      crashes: number;                                                      │
-│    }                                                                       │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 8. Rendering Pipeline
-
-### 8.1 React Three Fiber Scene Graph
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        SCENE GRAPH HIERARCHY                                │
-│                      src/renderer/scenes/GameScene.tsx                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  <Canvas>                                                                   │
-│    │                                                                        │
-│    ├── <Suspense fallback={<LoadingScreen />}>                             │
-│    │     │                                                                  │
-│    │     ├── <Environment />                                               │
-│    │     │     ├── <Sky />           // Procedural sky                     │
-│    │     │     ├── <ambientLight />  // Base illumination                  │
-│    │     │     ├── <directionalLight /> // Sun                             │
-│    │     │     └── <fog />           // Distance fog                       │
-│    │     │                                                                  │
-│    │     ├── <Terrain />                                                   │
-│    │     │     ├── <mesh>            // Ground plane                       │
-│    │     │     └── <gridHelper />    // Reference grid                     │
-│    │     │                                                                  │
-│    │     ├── <DroneModel ref={droneRef} />                                 │
-│    │     │     ├── <group>           // Main body                          │
-│    │     │     ├── <mesh> × 4        // Motor arms                         │
-│    │     │     ├── <mesh> × 4        // Propellers (animated)              │
-│    │     │     ├── <pointLight> × 4  // Motor lights                       │
-│    │     │     └── <mesh>            // LED indicators                     │
-│    │     │                                                                  │
-│    │     ├── <ParticleEffects />                                           │
-│    │     │     └── <points> × 4      // Thrust particles                   │
-│    │     │                                                                  │
-│    │     ├── {/* Mission Markers */}                                       │
-│    │     │     ├── <Checkpoint />    // Torus geometry                     │
-│    │     │     ├── <LandingZone />   // Ring markers                       │
-│    │     │     ├── <HoverZone />     // Wireframe boxes                    │
-│    │     │     └── <Collectible />   // Octahedron shapes                  │
-│    │     │                                                                  │
-│    │     ├── {/* Tutorial Markers */}                                      │
-│    │     │     └── <TutorialTarget /> // Green spheres + rings             │
-│    │     │                                                                  │
-│    │     └── <PostProcessingEffects />                                     │
-│    │           ├── <EffectComposer>                                        │
-│    │           │     ├── <Bloom />   // Glow effect                        │
-│    │           │     └── <SSAO />    // Ambient occlusion                  │
-│    │           └── </EffectComposer>                                       │
-│    │                                                                        │
-│    └── </Suspense>                                                          │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 8.2 Camera System
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           CAMERA MODES                                      │
-│                src/renderer/hooks/useCameraController.ts                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  MODE CONFIGURATIONS                                                        │
-│  ───────────────────                                                        │
-│                                                                             │
-│    ┌────────────┬───────┬────────────┬─────────────────────────────────┐   │
-│    │ Mode       │ FOV   │ Smoothing  │ Description                     │   │
-│    ├────────────┼───────┼────────────┼─────────────────────────────────┤   │
-│    │ Chase      │ 75°   │ 0.1        │ Behind drone, look-ahead        │   │
-│    │ FPV        │ 120°  │ 0.0        │ Cockpit view, follows rotation  │   │
-│    │ Orbit      │ 60°   │ 0.05       │ Auto-rotating around drone      │   │
-│    │ Cinematic  │ 45°   │ 0.02       │ Distant, smooth tracking        │   │
-│    └────────────┴───────┴────────────┴─────────────────────────────────┘   │
-│                                                                             │
-│  CHASE CAMERA ALGORITHM                                                     │
-│  ───────────────────────                                                    │
-│                                                                             │
-│    1. Calculate offset in local space:                                      │
-│       offset = { x: 0, y: followHeight, z: -followDistance }               │
-│                                                                             │
-│    2. Transform to world space using drone rotation                        │
-│                                                                             │
-│    3. Add look-ahead based on velocity:                                    │
-│       lookAhead = velocity * lookAheadFactor                               │
-│                                                                             │
-│    4. Smooth interpolation:                                                │
-│       camera.position = lerp(current, target, smoothing)                   │
-│                                                                             │
-│    5. Look at drone position + lookAhead                                   │
-│                                                                             │
-│  FPV CAMERA ALGORITHM                                                       │
-│  ────────────────────                                                       │
-│                                                                             │
-│    1. Position at drone location + camera offset                           │
-│    2. Apply drone rotation directly to camera                              │
-│    3. No smoothing (instant response)                                      │
-│                                                                             │
-│  ORBIT CAMERA ALGORITHM                                                     │
-│  ──────────────────────                                                     │
-│                                                                             │
-│    1. Maintain orbit angle (auto-incrementing)                             │
-│    2. Calculate position on circle:                                        │
-│       x = drone.x + radius * cos(angle)                                    │
-│       z = drone.z + radius * sin(angle)                                    │
-│       y = drone.y + height                                                 │
-│    3. Always look at drone center                                          │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 9. Audio System
-
-### 9.1 Audio Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           AUDIO SYSTEM                                      │
-│                   src/renderer/systems/AudioSystem.ts                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  WEB AUDIO API GRAPH                                                        │
-│  ───────────────────                                                        │
-│                                                                             │
-│    ┌─────────────────────────────────────────────────────────────────┐     │
-│    │                      MOTOR SOUNDS                               │     │
-│    │                                                                 │     │
-│    │   ┌───────────┐    ┌────────────┐    ┌──────────┐              │     │
-│    │   │ Oscillator│───>│ Lowpass    │───>│ Gain     │──┐           │     │
-│    │   │ (Sawtooth)│    │ Filter     │    │ (Motor 1)│  │           │     │
-│    │   │ 100-800Hz │    │ fc=1000Hz  │    │          │  │           │     │
-│    │   └───────────┘    └────────────┘    └──────────┘  │           │     │
-│    │                                                     │           │     │
-│    │   ┌───────────┐    ┌────────────┐    ┌──────────┐  │           │     │
-│    │   │ Oscillator│───>│ Lowpass    │───>│ Gain     │──┤           │     │
-│    │   │ Motor 2   │    │ Filter     │    │ (Motor 2)│  │           │     │
-│    │   └───────────┘    └────────────┘    └──────────┘  │           │     │
-│    │                                                     ├──> Mixer │     │
-│    │   ┌───────────┐    ┌────────────┐    ┌──────────┐  │           │     │
-│    │   │ Oscillator│───>│ Lowpass    │───>│ Gain     │──┤           │     │
-│    │   │ Motor 3   │    │ Filter     │    │ (Motor 3)│  │           │     │
-│    │   └───────────┘    └────────────┘    └──────────┘  │           │     │
-│    │                                                     │           │     │
-│    │   ┌───────────┐    ┌────────────┐    ┌──────────┐  │           │     │
-│    │   │ Oscillator│───>│ Lowpass    │───>│ Gain     │──┘           │     │
-│    │   │ Motor 4   │    │ Filter     │    │ (Motor 4)│              │     │
-│    │   └───────────┘    └────────────┘    └──────────┘              │     │
-│    │                                                                 │     │
-│    │   ┌───────────┐    ┌────────────┐    ┌──────────┐              │     │
-│    │   │ Noise     │───>│ Bandpass   │───>│ Gain     │───> Mixer    │     │
-│    │   │ Generator │    │ Filter     │    │ (Noise)  │              │     │
-│    │   └───────────┘    └────────────┘    └──────────┘              │     │
-│    │                                                                 │     │
-│    └─────────────────────────────────────────────────────────────────┘     │
-│                              │                                              │
-│                              ▼                                              │
-│    ┌─────────────────────────────────────────────────────────────────┐     │
-│    │                     EFFECTS CHANNEL                             │     │
-│    │                                                                 │     │
-│    │   ┌───────────────────────────────────────────────────────┐    │     │
-│    │   │ Sound Effect Buffers (one-shot playback)              │    │     │
-│    │   │   - checkpoint: 880Hz sine, 0.1s                      │    │     │
-│    │   │   - crash: noise burst, 0.3s                          │    │     │
-│    │   │   - arm: square wave up, 0.2s                         │    │     │
-│    │   │   - disarm: square wave down, 0.2s                    │    │     │
-│    │   │   - success: C5-E5-G5 chord, 0.5s                     │    │     │
-│    │   │   - fail: descending sine, 0.4s                       │    │     │
-│    │   └───────────────────────────────────────────────────────┘    │     │
-│    │                              │                                  │     │
-│    └──────────────────────────────┼──────────────────────────────────┘     │
-│                                   │                                         │
-│                                   ▼                                         │
-│    ┌─────────────────────────────────────────────────────────────────┐     │
-│    │                      MASTER OUTPUT                              │     │
-│    │                                                                 │     │
-│    │   ┌──────────┐    ┌──────────┐    ┌──────────────────────┐     │     │
-│    │   │ Motor Mix│───>│ Effects  │───>│ Master Gain          │───> Out   │
-│    │   │ Gain     │    │ Gain     │    │ (masterVolume)       │     │     │
-│    │   └──────────┘    └──────────┘    └──────────────────────┘     │     │
-│    │                                                                 │     │
-│    └─────────────────────────────────────────────────────────────────┘     │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 9.2 Motor Sound Calculation
-
-```typescript
-// Motor frequency based on RPM
-function calculateMotorFrequency(rpm: number): number {
-  const minFreq = 100;   // Hz at idle
-  const maxFreq = 800;   // Hz at max RPM
-  const maxRPM = 25000;  // Max motor RPM
-
-  return minFreq + (rpm / maxRPM) * (maxFreq - minFreq);
+  score: number;
+  missionTime: number;
+  comboMultiplier: number;
 }
 
-// Motor volume based on RPM
-function calculateMotorVolume(rpm: number, armed: boolean): number {
-  if (!armed) return 0;
+// Input Store - Combined input handling
+interface InputStore {
+  input: NormalizedInput;
+  mouseVelocity: { x: number; y: number };
+  lastMouseMoveTime: number;
+  combinedInputMode: boolean;  // Always true
+  keys: Map<string, KeyState>;
+  gamepad: GamepadState;
+}
 
-  const minVolume = 0.05;
-  const maxVolume = 0.3;
-  const maxRPM = 25000;
-
-  return minVolume + (rpm / maxRPM) * (maxVolume - minVolume);
+// Settings Store - Persisted to localStorage
+interface SettingsStore {
+  graphics: GraphicsSettings;
+  audio: AudioSettings;
+  controls: ControlSettings;
+  accessibility: AccessibilitySettings;
 }
 ```
 
 ---
 
-## 10. UI Components
+## 7. Rendering Pipeline
 
-### 10.1 UI Component Hierarchy
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          UI COMPONENTS                                      │
-│                        src/renderer/ui/                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  App.tsx                                                                    │
-│    │                                                                        │
-│    ├── {currentScreen === 'mainMenu' && <MainMenu />}                      │
-│    │     ├── Title / Logo                                                  │
-│    │     ├── Start Game Button                                             │
-│    │     │     ├── Free Play                                               │
-│    │     │     ├── Tutorial                                                │
-│    │     │     └── Missions                                                │
-│    │     └── Settings Button                                               │
-│    │                                                                        │
-│    ├── {currentScreen === 'settings' && <SettingsPanel />}                 │
-│    │     ├── Graphics Tab                                                  │
-│    │     │     ├── Resolution                                              │
-│    │     │     ├── Quality Preset                                          │
-│    │     │     ├── VSync Toggle                                            │
-│    │     │     ├── Shadows Toggle                                          │
-│    │     │     └── Post Processing Toggle                                  │
-│    │     │                                                                  │
-│    │     ├── Audio Tab                                                     │
-│    │     │     ├── Master Volume                                           │
-│    │     │     ├── Effects Volume                                          │
-│    │     │     ├── Music Volume                                            │
-│    │     │     └── Spatial Audio Toggle                                    │
-│    │     │                                                                  │
-│    │     ├── Controls Tab                                                  │
-│    │     │     ├── Input Method Selection                                  │
-│    │     │     ├── Sensitivity Sliders                                     │
-│    │     │     ├── Deadzone Sliders                                        │
-│    │     │     ├── Expo Curves                                             │
-│    │     │     └── Key Rebinding                                           │
-│    │     │                                                                  │
-│    │     └── Accessibility Tab                                             │
-│    │           ├── Motor Accessibility                                     │
-│    │           ├── Visual Accessibility                                    │
-│    │           ├── Audio Accessibility                                     │
-│    │           └── Cognitive Accessibility                                 │
-│    │                                                                        │
-│    ├── {currentScreen === 'pause' && <PauseMenu />}                        │
-│    │     ├── Resume Button                                                 │
-│    │     ├── Settings Button                                               │
-│    │     └── Quit Button                                                   │
-│    │                                                                        │
-│    ├── {isPlaying && <HUD />}                                              │
-│    │     ├── Altitude Indicator                                            │
-│    │     ├── Speed Indicator                                               │
-│    │     ├── Attitude Indicator (Artificial Horizon)                       │
-│    │     ├── Battery Level                                                 │
-│    │     ├── Flight Mode Display                                           │
-│    │     ├── Armed Status                                                  │
-│    │     └── Timer / Score                                                 │
-│    │                                                                        │
-│    ├── {activeMission && <MissionHUD />}                                   │
-│    │     ├── Mission Name                                                  │
-│    │     ├── Objective List                                                │
-│    │     ├── Time / Par Time                                               │
-│    │     └── Score Display                                                 │
-│    │                                                                        │
-│    ├── {tutorialActive && <TutorialOverlay />}                             │
-│    │     ├── Task Name                                                     │
-│    │     ├── Instructions                                                  │
-│    │     ├── Progress Indicator                                            │
-│    │     └── Skip / Retry Buttons                                          │
-│    │                                                                        │
-│    └── <ControlsHint />                                                    │
-│          └── Context-sensitive control hints                               │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 10.2 CSS Module Structure
+### 7.1 React Three Fiber Scene Graph
 
 ```
-ui/
-├── MainMenu.module.css          // Menu styling
-├── HUD.module.css               // Flight telemetry styling
-├── EnhancedHUD.module.css       // Advanced HUD styling
-├── SettingsPanel.module.css     // Settings form styling
-├── PauseMenu.module.css         // Pause overlay styling
-├── TutorialOverlay.module.css   // Tutorial popup styling
-├── MissionHUD.module.css        // Mission info styling
-├── ControlsHint.module.css      // Control hints styling
-└── LoadingScreen.module.css     // Loading indicator styling
+<Canvas>
+├── <Suspense fallback={<LoadingScreen />}>
+│   ├── <Environment />           # HDRI lighting, sky
+│   ├── <Terrain />               # Procedural ground
+│   ├── <DroneModel ref={droneRef} />
+│   │   ├── Body mesh
+│   │   ├── Motor arms × 4
+│   │   ├── Propellers × 4 (animated)
+│   │   └── LED indicators
+│   ├── <ParticleEffects />       # Thrust particles
+│   └── <PostProcessingEffects /> # Bloom, SSAO
+│
+├── <PerspectiveCamera />
+├── <ambientLight />
+├── <directionalLight />
+└── <fog />
+```
+
+### 7.2 Camera Modes
+
+| Mode | FOV | Smoothing | Description |
+|------|-----|-----------|-------------|
+| **Chase** | 75° | 0.1 | Behind drone, look-ahead |
+| **FPV** | 120° | 0.0 | Cockpit view, instant response |
+| **Orbit** | 60° | 0.05 | Auto-rotating around drone |
+| **Cinematic** | 45° | 0.02 | Distant, smooth tracking |
+
+---
+
+## 8. Game Loop
+
+### 8.1 Frame-by-Frame Execution
+
+```typescript
+// src/renderer/hooks/useGameManager.ts
+
+useFrame((state, delta) => {
+  if (gameStore.isPaused) return;
+
+  // Clamp delta to prevent physics explosion
+  const clampedDelta = Math.min(delta, 0.05);
+
+  // ═══════════════════════════════════════════════
+  // STEP 1: INPUT PROCESSING
+  // ═══════════════════════════════════════════════
+  inputStore.update();  // Includes mouse velocity decay
+  const input = inputStore.input;
+
+  // ═══════════════════════════════════════════════
+  // STEP 2: RATE CALCULATION (Betaflight)
+  // ═══════════════════════════════════════════════
+  const rateOutput = betaflightRates.calculate({
+    roll: input.roll,
+    pitch: input.pitch,
+    yaw: input.yaw,
+  });
+
+  // ═══════════════════════════════════════════════
+  // STEP 3: PHYSICS UPDATE (4 substeps at 500Hz)
+  // ═══════════════════════════════════════════════
+  for (let i = 0; i < 4; i++) {
+    physics.update(input, rateOutput, clampedDelta / 4);
+  }
+  const droneState = physics.getState();
+
+  // ═══════════════════════════════════════════════
+  // STEP 4: UPDATE GAME STATE
+  // ═══════════════════════════════════════════════
+  gameStore.updateDrone(droneState);
+  gameStore.tick(clampedDelta);
+
+  // ═══════════════════════════════════════════════
+  // STEP 5: UPDATE AUDIO
+  // ═══════════════════════════════════════════════
+  audioSystem.update({
+    motorRPM: droneState.motorRPM,
+    velocity: droneState.velocity,
+    position: droneState.position,
+    armed: droneState.isArmed,
+    throttle: input.throttle,
+  });
+
+  // ═══════════════════════════════════════════════
+  // STEP 6: UPDATE 3D SCENE
+  // ═══════════════════════════════════════════════
+  if (droneRef.current) {
+    droneRef.current.position.copy(droneState.position);
+    droneRef.current.rotation.copy(droneState.rotation);
+  }
+});
 ```
 
 ---
 
-## 11. Data Types
+## 9. File Reference
 
-### 11.1 Core Types (src/shared/types.ts)
+### 9.1 Key Files
 
-```typescript
-// Input Types
-type InputSource = 'keyboard' | 'mouse' | 'trackpad' | 'gamepad' | 'rc';
-
-interface NormalizedInput {
-  throttle: number;     // 0 to 1
-  yaw: number;          // -1 to 1
-  pitch: number;        // -1 to 1
-  roll: number;         // -1 to 1
-  aux1: boolean;        // Arm/Disarm
-  aux2: number;         // Flight mode (0, 1, 2)
-  aux3: number;         // Camera tilt (-1 to 1)
-  timestamp: number;
-  source: InputSource;
-}
-
-// Drone Types
-type FlightMode = 'angle' | 'horizon' | 'acro';
-
-interface DroneState {
-  position: Vector3;
-  rotation: Quaternion;
-  velocity: Vector3;
-  angularVelocity: Vector3;
-  motorRPM: [number, number, number, number];
-  batteryLevel: number;
-  isArmed: boolean;
-  flightMode: FlightMode;
-}
-
-// Game Types
-type GameScreen = 'mainMenu' | 'settings' | 'tutorial' | 'freePlay' | 'mission' | 'pause';
-type MissionType = 'timeTrial' | 'precision' | 'ctf' | 'search' | 'survival' | 'delivery';
-
-// Utility Types
-interface Vector3 { x: number; y: number; z: number; }
-interface Quaternion { x: number; y: number; z: number; w: number; }
-```
+| File | Lines | Purpose |
+|------|-------|---------|
+| `src/renderer/store/inputStore.ts` | ~400 | Combined input handling with mouse velocity |
+| `src/renderer/systems/ProAudioSystem.ts` | ~500 | Multi-layer audio synthesis |
+| `src/renderer/systems/ProAudioSystem.test.ts` | ~300 | 25 audio tests |
+| `src/renderer/systems/BetaflightRates.ts` | ~150 | Rate calculation |
+| `src/renderer/systems/BetaflightRates.test.ts` | ~200 | Rate tests |
+| `src/renderer/core/PhysicsEngine.ts` | ~480 | Physics simulation |
+| `src/renderer/hooks/useGameManager.ts` | ~180 | Game loop |
+| `src/renderer/store/gameStore.ts` | ~170 | Game state |
+| `src/renderer/ui/HUD.tsx` | ~210 | Flight HUD |
+| `src/renderer/ui/HUD.module.css` | ~350 | HUD styles |
 
 ---
 
-## 12. Configuration Constants
+## 10. Common Tasks
 
-### 12.1 Physics Constants (src/shared/constants.ts)
+### 10.1 Add New Sound Effect
 
 ```typescript
-export const PHYSICS = {
-  TIMESTEP: 1 / 500,           // 500Hz physics
-  GRAVITY: 9.81,               // m/s²
-  AIR_DENSITY: 1.225,          // kg/m³
-  MAX_ALTITUDE: 500,           // meters
-  GROUND_EFFECT_HEIGHT: 1.0,   // meters
-  GROUND_EFFECT_STRENGTH: 0.3, // 30% thrust boost
-};
+// In ProAudioSystem.ts playEffect()
+case 'newEffect':
+  this.playNewEffect(volume);
+  break;
 
-export const DRONE_PRESETS = {
-  BEGINNER: {
-    mass: 0.5,
-    thrustMultiplier: 1.2,
-    dragCoefficient: 0.6,
-    rates: { roll: 200, pitch: 200, yaw: 150 },
+private playNewEffect(volume: number): void {
+  const osc = this.context.createOscillator();
+  const gain = this.context.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.value = 440;
+
+  gain.gain.setValueAtTime(volume * this.config.effectsVolume, this.context.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, this.context.currentTime + 0.5);
+
+  osc.connect(gain);
+  gain.connect(this.effectsGain);
+
+  osc.start();
+  osc.stop(this.context.currentTime + 0.5);
+}
+```
+
+### 10.2 Modify Rate Curves
+
+```typescript
+// In BetaflightRates.ts
+export const RATE_PRESETS = {
+  custom: {
+    roll:  { rcRate: 180, maxRate: 750, expo: 0.35 },
+    pitch: { rcRate: 180, maxRate: 750, expo: 0.35 },
+    yaw:   { rcRate: 140, maxRate: 550, expo: 0.25 },
   },
-  RACING: {
-    mass: 0.35,
-    thrustMultiplier: 2.0,
-    dragCoefficient: 0.4,
-    rates: { roll: 600, pitch: 600, yaw: 400 },
-  },
-  // ... more presets
-};
-
-export const INPUT = {
-  TAP_DURATION: 100,           // ms
-  HOLD_RAMP_SPEED: 150,        // ms to reach 100%
-  KEYBOARD_DEADZONE: 0.02,
-  GAMEPAD_DEADZONE: 0.05,
-  LATENCY_TARGET_KEYBOARD: 8,  // ms
-  LATENCY_TARGET_GAMEPAD: 16,  // ms
-};
-
-export const SCORING = {
-  OBJECTIVE_POINTS: 1000,
-  TIME_BONUS_PER_SECOND: 100,
-  TIME_BONUS_MAX: 5000,
-  CRASH_PENALTY: -500,
-  RESET_PENALTY: -1000,
-  COMBO_MAX: 2.0,
-  COMBO_DECAY: 0.1,            // per second
 };
 ```
 
----
+### 10.3 Adjust Mouse Sensitivity
 
-## 13. Game Loop
-
-### 13.1 Main Game Loop (useFrame)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           GAME LOOP (60 FPS)                                │
-│                      Inside GameScene.tsx useFrame()                        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  useFrame((state, delta) => {                                              │
-│    │                                                                        │
-│    │  // 1. CLAMP DELTA TIME                                               │
-│    │  const dt = Math.min(delta, 0.05);  // Prevent physics explosion      │
-│    │                                                                        │
-│    │  // 2. UPDATE INPUT                                                   │
-│    ├──> inputStore.update()                                                │
-│    │      └── Poll keyboard state                                          │
-│    │      └── Poll gamepad state                                           │
-│    │      └── Calculate normalized input                                   │
-│    │                                                                        │
-│    │  // 3. UPDATE GAME MANAGER                                            │
-│    ├──> gameManager.update(dt)                                             │
-│    │      │                                                                │
-│    │      │  // 3a. Physics substeps (4x for stability)                   │
-│    │      ├──> for (i = 0; i < 4; i++) {                                  │
-│    │      │      physics.update(normalizedInput, dt / 4)                  │
-│    │      │    }                                                           │
-│    │      │                                                                │
-│    │      │  // 3b. Get new state                                         │
-│    │      ├──> const physicsState = physics.getState()                    │
-│    │      │                                                                │
-│    │      │  // 3c. Update game store                                     │
-│    │      ├──> gameStore.updateDrone(physicsState)                        │
-│    │      │                                                                │
-│    │      │  // 3d. Check for crashes                                     │
-│    │      ├──> if (physics.checkCrash()) {                                │
-│    │      │      gameStore.handleCrash()                                  │
-│    │      │      audioSystem.playEffect('crash')                          │
-│    │      │    }                                                           │
-│    │      │                                                                │
-│    │      │  // 3e. Update systems                                        │
-│    │      ├──> tutorialSystem?.update(droneState, dt)                     │
-│    │      ├──> missionSystem?.update(droneState, dt)                      │
-│    │      │                                                                │
-│    │      │  // 3f. Update audio                                          │
-│    │      └──> audioSystem.updateMotorSounds(motorRPM, isArmed)           │
-│    │                                                                        │
-│    │  // 4. UPDATE 3D SCENE                                                │
-│    ├──> droneRef.current.position.copy(droneState.position)               │
-│    ├──> droneRef.current.quaternion.copy(droneState.rotation)             │
-│    │                                                                        │
-│    │  // 5. UPDATE CAMERA                                                  │
-│    ├──> cameraController.update(droneState, dt)                           │
-│    │                                                                        │
-│    │  // 6. UPDATE GAME TIME                                               │
-│    └──> if (isPlaying && !isPaused) gameStore.tick(dt)                    │
-│                                                                             │
-│  });                                                                        │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+```typescript
+// In inputStore.ts handleMouseMove()
+const sensitivity = 0.003;  // Increase for faster response
+const decayRate = 0.10;     // Decrease for slower decay
 ```
 
 ---
 
-## 14. Performance Considerations
+## 11. Troubleshooting
 
-### 14.1 Optimization Strategies
+### 11.1 Audio Not Playing
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      PERFORMANCE OPTIMIZATIONS                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  PHYSICS                                                                    │
-│  ───────                                                                    │
-│    • Fixed timestep (1/500s) prevents instability                          │
-│    • Delta time clamped to 0.05s max                                       │
-│    • 4 substeps per frame for smooth integration                           │
-│    • Simple collision detection (ground plane only)                        │
-│                                                                             │
-│  RENDERING                                                                  │
-│  ─────────                                                                  │
-│    • React.memo() for pure components                                      │
-│    • useCallback/useMemo for expensive calculations                        │
-│    • Instanced geometry for particles                                      │
-│    • Level-of-detail for distant objects                                   │
-│    • Frustum culling (built into Three.js)                                 │
-│                                                                             │
-│  STATE                                                                      │
-│  ─────                                                                      │
-│    • Zustand selectors for fine-grained subscriptions                      │
-│    • Shallow equality checks prevent unnecessary re-renders                │
-│    • Separate stores for different concerns                                │
-│                                                                             │
-│  AUDIO                                                                      │
-│  ─────                                                                      │
-│    • Single AudioContext instance                                          │
-│    • Reused oscillators for motor sounds                                   │
-│    • One-shot buffers for effects                                          │
-│    • Gain ramping prevents audio clicks                                    │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+**Cause**: Browser autoplay policy suspends AudioContext
+
+**Solution**: ProAudioSystem has `setupAutoResume()`. If still not working:
+```typescript
+document.addEventListener('click', () => {
+  audioSystem.resume();
+});
 ```
 
----
+### 11.2 Mouse Control Feels Laggy
 
-## 15. Extensibility Guide
+**Cause**: Decay rate too high or sensitivity too low
 
-### 15.1 Adding New Features
-
+**Solution**: In inputStore.ts:
+```typescript
+const decayRate = 0.10;     // Lower = slower decay
+const sensitivity = 0.003;  // Higher = more responsive
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        EXTENSIBILITY GUIDE                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ADD NEW DRONE PRESET                                                       │
-│  ────────────────────                                                       │
-│    1. Edit src/shared/constants.ts                                         │
-│    2. Add to DRONE_PRESETS object                                          │
-│    3. Update UI in SettingsPanel.tsx                                       │
-│                                                                             │
-│  ADD NEW FLIGHT MODE                                                        │
-│  ──────────────────                                                         │
-│    1. Add to FlightMode type in types.ts                                   │
-│    2. Implement behavior in PhysicsEngine.ts                               │
-│    3. Add key binding in constants.ts                                      │
-│    4. Update HUD display                                                   │
-│                                                                             │
-│  ADD NEW MISSION TYPE                                                       │
-│  ───────────────────                                                        │
-│    1. Add to MissionType in types.ts                                       │
-│    2. Implement in MissionSystem.ts                                        │
-│    3. Add objective validation logic                                       │
-│    4. Create mission markers in GameScene.tsx                              │
-│                                                                             │
-│  ADD NEW TUTORIAL LEVEL                                                     │
-│  ─────────────────────                                                      │
-│    1. Add to TutorialLevel type in types.ts                                │
-│    2. Define tasks in TutorialSystem.ts                                    │
-│    3. Update progression logic                                             │
-│                                                                             │
-│  ADD NEW CAMERA MODE                                                        │
-│  ──────────────────                                                         │
-│    1. Add mode to CameraMode type                                          │
-│    2. Add config in useCameraController.ts                                 │
-│    3. Implement update logic                                               │
-│    4. Add key binding                                                      │
-│                                                                             │
-│  ADD NEW SOUND EFFECT                                                       │
-│  ───────────────────                                                        │
-│    1. Generate buffer in AudioSystem.ts                                    │
-│    2. Add to effects map                                                   │
-│    3. Call audioSystem.playEffect('name')                                  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
+
+### 11.3 Physics "Explosion"
+
+**Cause**: Delta time spike causing unstable integration
+
+**Solution**: Already clamped in useGameManager:
+```typescript
+const clampedDelta = Math.min(delta, 0.05);
+```
+
+### 11.4 Test Failures in ProAudioSystem
+
+**Cause**: Mock missing required properties
+
+**Solution**: Ensure mock has all properties:
+```typescript
+createBiquadFilter: vi.fn(() => ({
+  type: 'lowpass',
+  frequency: { value: 0, setTargetAtTime: vi.fn() },
+  Q: { value: 0 },
+  gain: { value: 0 },  // Required for lowshelf filter!
+  connect: vi.fn(),
+})),
 ```
 
 ---
 
-## Conclusie
+## Version History
 
-Dit document biedt een complete technische referentie voor de Aetherwing Drone Simulator. De architectuur is ontworpen voor:
-
-- **Modulariteit**: Gescheiden concerns via stores en systems
-- **Performance**: Geoptimaliseerde physics en rendering
-- **Uitbreidbaarheid**: Eenvoudig nieuwe features toevoegen
-- **Toegankelijkheid**: Uitgebreide a11y ondersteuning
-
-Voor vragen of bijdragen, zie de [README.md](./README.md) of open een issue op GitHub.
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0.0 | 2024-01 | Initial release |
+| 1.1.0 | 2024-01 | Added ProAudioSystem with multi-layer synthesis |
+| 1.2.0 | 2024-01 | Added Betaflight Rates system |
+| 1.3.0 | 2024-01 | Combined input mode, mouse velocity decay |
+| 2.0.0 | 2024-01 | Brick-wall limiter, warmth filter, auto-resume, 104 tests |
 
 ---
 
-*Document versie: 1.0.0*
-*Laatste update: 2025*
+<div align="center">
+
+```
+╔═══════════════════════════════════════════════════════════════════╗
+║                                                                   ║
+║                    AETHERWING DRONE SIMULATOR                     ║
+║                                                                   ║
+║                  "Master the skies, one input at a time."         ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
+```
+
+</div>
