@@ -36,7 +36,7 @@ export class EnhancedAudioSystem {
 
   // Listener for 3D spatial audio (reserved for future use)
 
-  async initialize(): Promise<void> {
+  initialize(): void {
     if (this.isInitialized) return;
 
     try {
@@ -74,10 +74,10 @@ export class EnhancedAudioSystem {
       }
 
       // Initialize wind sound
-      await this.initializeWindSound();
+      this.initializeWindSound();
 
       // Initialize ambient sound
-      await this.initializeAmbientSound();
+      this.initializeAmbientSound();
 
       // Initialize warning system
       this.initializeWarningSystem();
@@ -88,7 +88,7 @@ export class EnhancedAudioSystem {
     }
   }
 
-  private async initializeWindSound(): Promise<void> {
+  private initializeWindSound(): void {
     if (!this.audioContext || !this.masterGain) return;
 
     // Create wind noise using noise buffer
@@ -127,7 +127,7 @@ export class EnhancedAudioSystem {
     this.windNoise.start();
   }
 
-  private async initializeAmbientSound(): Promise<void> {
+  private initializeAmbientSound(): void {
     if (!this.audioContext || !this.masterGain) return;
 
     // Create ambient nature sound (birds, etc.)
@@ -367,13 +367,13 @@ export class EnhancedAudioSystem {
 
   suspend(): void {
     if (this.audioContext && this.audioContext.state === 'running') {
-      this.audioContext.suspend();
+      void this.audioContext.suspend();
     }
   }
 
   resume(): void {
     if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+      void this.audioContext.resume();
     }
   }
 
@@ -393,7 +393,7 @@ export class EnhancedAudioSystem {
     this.warningOscillator?.stop();
     this.warningOscillator?.disconnect();
 
-    this.audioContext?.close();
+    void this.audioContext?.close();
 
     this.motorOscillators = [];
     this.motorGains = [];

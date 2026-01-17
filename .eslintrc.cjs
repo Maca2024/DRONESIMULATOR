@@ -49,6 +49,8 @@ module.exports = {
         'emissive', 'emissiveIntensity', 'sizeAttenuation', 'geometry', 'material',
         'shadow-mapSize', 'shadow-camera-far', 'shadow-camera-left',
         'shadow-camera-right', 'shadow-camera-top', 'shadow-camera-bottom',
+        'distance', 'depthWrite', 'shadow-mapSize-width', 'shadow-mapSize-height',
+        'groundColor', 'decay', 'penumbra', 'color', 'fog', 'near', 'far',
       ]
     }],
 
