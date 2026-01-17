@@ -4,6 +4,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: '/DRONESIMULATOR/',
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
