@@ -29,6 +29,7 @@ const mockAudioContext = {
     type: 'lowpass',
     frequency: { value: 0, setTargetAtTime: vi.fn() },
     Q: { value: 0 },
+    gain: { value: 0 },  // Added for lowshelf filter
     connect: vi.fn(),
   })),
   createBuffer: vi.fn((channels, length, sampleRate) => ({

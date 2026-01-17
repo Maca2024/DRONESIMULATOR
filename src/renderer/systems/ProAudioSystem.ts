@@ -101,6 +101,12 @@ export class ProAudioSystem {
   // Compressor for dynamics
   private compressor: DynamicsCompressorNode | null = null;
 
+  // Limiter to prevent clipping
+  private limiter: DynamicsCompressorNode | null = null;
+
+  // Warmth filter (subtle low-pass for smoother sound)
+  private warmthFilter: BiquadFilterNode | null = null;
+
   // Effect buffers
   private effectBuffers: Map<string, AudioBuffer> = new Map();
 
@@ -114,6 +120,7 @@ export class ProAudioSystem {
   private isInitialized = false;
   private isMuted = false;
   private lastState: DroneAudioState | null = null;
+  private audioResumed = false;
 
   private config: ProAudioConfig = {
     masterVolume: 0.7,
@@ -136,28 +143,54 @@ export class ProAudioSystem {
       this.context = new (window.AudioContext ||
         (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
 
-      // Create master chain: motors -> compressor -> master gain -> destination
+      // === MASTER CHAIN ===
+      // Signal flow: motors -> compressor -> warmth -> limiter -> master -> destination
+
+      // Master gain (final volume control)
       this.masterGain = this.context.createGain();
       this.masterGain.gain.value = this.config.masterVolume;
       this.masterGain.connect(this.context.destination);
 
+      // Limiter to prevent clipping (brick-wall limiting)
+      this.limiter = this.context.createDynamicsCompressor();
+      this.limiter.threshold.value = -3;   // Catch peaks
+      this.limiter.knee.value = 0;         // Hard knee
+      this.limiter.ratio.value = 20;       // Near-infinite ratio
+      this.limiter.attack.value = 0.001;   // Fast attack
+      this.limiter.release.value = 0.1;    // Quick release
+      this.limiter.connect(this.masterGain);
+
+      // Warmth filter (subtle roll-off of harsh highs)
+      this.warmthFilter = this.context.createBiquadFilter();
+      this.warmthFilter.type = 'lowshelf';
+      this.warmthFilter.frequency.value = 300;
+      this.warmthFilter.gain.value = 2;    // Boost lows slightly
+      this.warmthFilter.connect(this.limiter);
+
+      // High cut for less harshness
+      const highCut = this.context.createBiquadFilter();
+      highCut.type = 'lowpass';
+      highCut.frequency.value = 8000;      // Cut harsh highs
+      highCut.Q.value = 0.7;
+      highCut.connect(this.warmthFilter);
+
       // Compressor for better dynamics
       this.compressor = this.context.createDynamicsCompressor();
-      this.compressor.threshold.value = -24;
-      this.compressor.knee.value = 30;
-      this.compressor.ratio.value = 4;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.25;
-      this.compressor.connect(this.masterGain);
+      this.compressor.threshold.value = -20;
+      this.compressor.knee.value = 20;
+      this.compressor.ratio.value = 3;
+      this.compressor.attack.value = 0.01;
+      this.compressor.release.value = 0.2;
+      this.compressor.connect(highCut);
 
       // Motor mix bus
       this.motorMixGain = this.context.createGain();
-      this.motorMixGain.gain.value = this.config.motorVolume;
+      this.motorMixGain.gain.value = this.config.motorVolume * 0.6; // Lower base volume
       this.motorMixGain.connect(this.compressor);
 
       // Effects bus
       this.effectsGain = this.context.createGain();
-      this.effectsGain.gain.value = this.config.effectsVolume;
+      this.effectsGain.gain.value = this.config.effectsVolume * 0.8;
       this.effectsGain.connect(this.compressor);
 
       // Initialize subsystems
@@ -167,11 +200,34 @@ export class ProAudioSystem {
       this.initializeReverb();
       this.generateAllEffects();
 
+      // Setup auto-resume on user interaction
+      this.setupAutoResume();
+
       this.isInitialized = true;
       console.info('ProAudioSystem initialized with multi-layered motor synthesis');
     } catch (error) {
       console.error('Failed to initialize ProAudioSystem:', error);
     }
+  }
+
+  /**
+   * Setup automatic audio context resume on user interaction
+   */
+  private setupAutoResume(): void {
+    const resumeAudio = (): void => {
+      if (this.context && this.context.state === 'suspended' && !this.audioResumed) {
+        this.context.resume().then(() => {
+          this.audioResumed = true;
+          console.info('Audio context resumed');
+        }).catch(console.error);
+      }
+    };
+
+    // Resume on any user interaction
+    const events = ['click', 'keydown', 'touchstart', 'mousedown'];
+    events.forEach(event => {
+      window.addEventListener(event, resumeAudio, { once: false, passive: true });
+    });
   }
 
   /**
@@ -208,35 +264,43 @@ export class ProAudioSystem {
     // Master filter (simulates motor housing resonance)
     const masterFilter = this.context.createBiquadFilter();
     masterFilter.type = 'lowpass';
-    masterFilter.frequency.value = 3000;
-    masterFilter.Q.value = 0.7;
+    masterFilter.frequency.value = 2500;  // Lower cutoff for warmth
+    masterFilter.Q.value = 0.5;           // Less resonance
     masterFilter.connect(masterGain);
 
+    // Additional smoothing filter
+    const smoothFilter = this.context.createBiquadFilter();
+    smoothFilter.type = 'lowpass';
+    smoothFilter.frequency.value = 4000;
+    smoothFilter.Q.value = 0.3;
+    smoothFilter.connect(masterFilter);
+
     // Fundamental frequency oscillator (main motor tone)
+    // Using triangle wave for smoother sound
     const fundamental = this.context.createOscillator();
-    fundamental.type = 'sawtooth';
+    fundamental.type = 'triangle';  // Smoother than sawtooth
     fundamental.frequency.value = MIN_MOTOR_FREQ;
 
     const fundamentalGain = this.context.createGain();
-    fundamentalGain.gain.value = 0.4;
+    fundamentalGain.gain.value = 0.25;  // Lower volume
     fundamental.connect(fundamentalGain);
-    fundamentalGain.connect(masterFilter);
+    fundamentalGain.connect(smoothFilter);
     fundamental.start();
 
-    // Harmonic oscillators
+    // Harmonic oscillators - use sine waves for smoothness
     const harmonics: OscillatorNode[] = [];
     const harmonicGains: GainNode[] = [];
 
     for (let h = 0; h < HARMONIC_RATIOS.length; h++) {
       const harmonic = this.context.createOscillator();
-      harmonic.type = h === 0 ? 'sawtooth' : 'triangle';
+      harmonic.type = 'sine';  // Sine waves are smoothest
       harmonic.frequency.value = MIN_MOTOR_FREQ * HARMONIC_RATIOS[h];
 
       const hGain = this.context.createGain();
-      hGain.gain.value = HARMONIC_GAINS[h] * 0.3;
+      hGain.gain.value = HARMONIC_GAINS[h] * 0.15;  // Lower harmonic volume
 
       harmonic.connect(hGain);
-      hGain.connect(masterFilter);
+      hGain.connect(smoothFilter);
       harmonic.start();
 
       harmonics.push(harmonic);

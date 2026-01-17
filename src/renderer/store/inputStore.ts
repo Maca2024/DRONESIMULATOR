@@ -12,7 +12,10 @@ interface InputState {
   // Current normalized input
   input: NormalizedInput;
 
-  // Active input source
+  // Combined input mode - uses all sources together
+  combinedInputMode: boolean;
+
+  // Active input source (for display purposes)
   activeSource: InputSource;
 
   // Keyboard state
@@ -21,11 +24,12 @@ interface InputState {
   // Mouse state
   mousePosition: { x: number; y: number };
   mouseDelta: { x: number; y: number };
+  mouseVelocity: { x: number; y: number };  // Smoothed velocity
   mouseButtons: Map<number, boolean>;
-  mouseWheel: number;
   mouseThrottle: number;
   mouseFlightEnabled: boolean;
   pointerLocked: boolean;
+  lastMouseMoveTime: number;
 
   // Gamepad state
   gamepads: Map<number, Gamepad>;
@@ -44,6 +48,7 @@ interface InputState {
   getInput: () => NormalizedInput;
   enableMouseFlight: (enable: boolean) => void;
   requestPointerLock: () => void;
+  setCombinedInputMode: (enabled: boolean) => void;
 }
 
 const createEmptyInput = (): NormalizedInput => ({
@@ -60,21 +65,23 @@ const createEmptyInput = (): NormalizedInput => ({
 
 export const useInputStore = create<InputState>((set, get) => ({
   input: createEmptyInput(),
+  combinedInputMode: true,  // Use both keyboard and mouse together
   activeSource: 'keyboard',
   keys: new Map(),
   mousePosition: { x: 0, y: 0 },
   mouseDelta: { x: 0, y: 0 },
+  mouseVelocity: { x: 0, y: 0 },
   mouseButtons: new Map(),
-  mouseWheel: 0,
-  mouseThrottle: 0,
+  mouseThrottle: 0.5,  // Start at 50% throttle
   mouseFlightEnabled: true,
   pointerLocked: false,
+  lastMouseMoveTime: 0,
   gamepads: new Map(),
   activeGamepadIndex: null,
   config: {
     sensitivity: 1.0,
-    deadzone: 0.02,
-    expo: 0.3,
+    deadzone: 0.05,  // Slightly higher deadzone for stability
+    expo: 0.4,       // More expo for better center control
     inverted: {
       pitch: false,
       roll: false,
@@ -120,18 +127,22 @@ export const useInputStore = create<InputState>((set, get) => ({
     // Mouse events for full flight control
     const handleMouseMove = (e: MouseEvent): void => {
       const state = get();
+      const now = performance.now();
 
       if (state.pointerLocked) {
         // Use movement delta for flight control when pointer is locked
+        // Direct velocity from mouse movement (will decay in update)
+        const sensitivity = 0.003;
         set({
-          mouseDelta: {
-            x: state.mouseDelta.x + e.movementX * 0.002,
-            y: state.mouseDelta.y + e.movementY * 0.002
+          mouseVelocity: {
+            x: Math.max(-1, Math.min(1, e.movementX * sensitivity)),
+            y: Math.max(-1, Math.min(1, e.movementY * sensitivity))
           },
+          lastMouseMoveTime: now,
           activeSource: 'mouse',
         });
       } else {
-        // Use screen position when not locked
+        // Use screen position when not locked - position-based control
         const centerX = window.innerWidth / 2;
         const centerY = window.innerHeight / 2;
         const normalizedX = (e.clientX - centerX) / centerX;
@@ -140,6 +151,8 @@ export const useInputStore = create<InputState>((set, get) => ({
         set({
           mousePosition: { x: e.clientX, y: e.clientY },
           mouseDelta: { x: normalizedX, y: normalizedY },
+          mouseVelocity: { x: normalizedX, y: normalizedY },
+          lastMouseMoveTime: now,
           activeSource: 'mouse',
         });
       }
@@ -289,6 +302,29 @@ export const useInputStore = create<InputState>((set, get) => ({
       set({ keys: newKeys });
     }
 
+    // Update mouse velocity with decay (auto-center when not moving)
+    const timeSinceMouseMove = now - state.lastMouseMoveTime;
+    if (timeSinceMouseMove > 50) {  // Start decay after 50ms of no movement
+      const decayRate = 0.15;  // Smooth decay
+      const newVelocity = {
+        x: state.mouseVelocity.x * (1 - decayRate),
+        y: state.mouseVelocity.y * (1 - decayRate)
+      };
+      // Zero out very small values
+      if (Math.abs(newVelocity.x) < 0.01) newVelocity.x = 0;
+      if (Math.abs(newVelocity.y) < 0.01) newVelocity.y = 0;
+
+      set({ mouseVelocity: newVelocity });
+    }
+
+    // Smooth mouse delta towards velocity (for position-based control)
+    const smoothing = 0.2;
+    const newDelta = {
+      x: state.mouseDelta.x + (state.mouseVelocity.x - state.mouseDelta.x) * smoothing,
+      y: state.mouseDelta.y + (state.mouseVelocity.y - state.mouseDelta.y) * smoothing
+    };
+    set({ mouseDelta: newDelta });
+
     // Update gamepad state
     const gamepads = navigator.getGamepads();
     if (gamepads) {
@@ -322,6 +358,8 @@ export const useInputStore = create<InputState>((set, get) => ({
       document.body.requestPointerLock();
     }
   },
+
+  setCombinedInputMode: (enabled) => set({ combinedInputMode: enabled }),
 }));
 
 // Helper functions
@@ -354,8 +392,12 @@ function applyDeadzone(value: number, deadzone: number): number {
 }
 
 function calculateNormalizedInput(state: InputState): NormalizedInput {
-  const { keys, keyBindings, config, activeSource, gamepads, activeGamepadIndex, mouseThrottle, mouseDelta, mouseButtons, mouseFlightEnabled } = state;
+  const {
+    keys, keyBindings, config, activeSource, gamepads, activeGamepadIndex,
+    mouseThrottle, mouseVelocity, mouseButtons, mouseFlightEnabled, combinedInputMode
+  } = state;
 
+  // Start with zero inputs
   let throttle = 0;
   let yaw = 0;
   let pitch = 0;
@@ -364,69 +406,103 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
   let aux2 = 0;
   let aux3 = 0;
 
-  if (activeSource === 'keyboard') {
-    // Calculate from keyboard
+  // === KEYBOARD INPUT ===
+  const keyboardActive = combinedInputMode || activeSource === 'keyboard';
+  if (keyboardActive) {
+    // Throttle: Space increases, Shift decreases from current mouse throttle
     const thrustUp = getKeyValue(keys, keyBindings.thrustUp);
     const thrustDown = getKeyValue(keys, keyBindings.thrustDown);
-    throttle = thrustUp - thrustDown * 0.5;
-    throttle = Math.max(0, Math.min(1, (throttle + 1) / 2));
 
+    if (thrustUp > 0 || thrustDown > 0) {
+      // Keyboard directly controls throttle
+      throttle = thrustUp - thrustDown * 0.8;
+      throttle = Math.max(0, Math.min(1, throttle));
+    }
+
+    // Yaw
     const yawLeft = getKeyValue(keys, keyBindings.yawLeft);
     const yawRight = getKeyValue(keys, keyBindings.yawRight);
-    yaw = yawRight - yawLeft;
+    yaw += yawRight - yawLeft;
 
+    // Pitch
     const pitchUp = getKeyValue(keys, keyBindings.moveUp);
     const pitchDown = getKeyValue(keys, keyBindings.moveDown);
-    pitch = pitchDown - pitchUp;
+    pitch += pitchDown - pitchUp;
 
+    // Roll
     const rollLeft = getKeyValue(keys, keyBindings.moveLeft);
     const rollRight = getKeyValue(keys, keyBindings.moveRight);
-    roll = rollRight - rollLeft;
+    roll += rollRight - rollLeft;
 
-    aux1 = getKeyValue(keys, keyBindings.arm) > 0.5;
+    // Arm with R key
+    if (getKeyValue(keys, keyBindings.arm) > 0.5) aux1 = true;
 
+    // Flight modes
     if (getKeyValue(keys, keyBindings.modeAngle) > 0.5) aux2 = 0;
     if (getKeyValue(keys, keyBindings.modeHorizon) > 0.5) aux2 = 1;
     if (getKeyValue(keys, keyBindings.modeAcro) > 0.5) aux2 = 2;
 
+    // Camera
     const camUp = getKeyValue(keys, keyBindings.cameraUp);
     const camDown = getKeyValue(keys, keyBindings.cameraDown);
     aux3 = camUp - camDown;
-  } else if (activeSource === 'mouse' && mouseFlightEnabled) {
-    // Full mouse flight control
-    // Mouse X = Roll, Mouse Y = Pitch
-    // Left click = Arm, Right click = Yaw (or pointer lock)
-    // Scroll wheel = Throttle
+  }
 
-    throttle = mouseThrottle;
+  // === MOUSE INPUT ===
+  const mouseActive = mouseFlightEnabled && (combinedInputMode || activeSource === 'mouse');
+  if (mouseActive) {
+    // Use mouse throttle if keyboard isn't controlling it
+    const thrustUp = getKeyValue(keys, keyBindings.thrustUp);
+    const thrustDown = getKeyValue(keys, keyBindings.thrustDown);
+    if (thrustUp === 0 && thrustDown === 0) {
+      throttle = mouseThrottle;
+    }
 
-    // Roll from mouse X movement
-    roll = Math.max(-1, Math.min(1, mouseDelta.x));
+    // Mouse velocity controls roll/pitch (only if keyboard isn't active for those)
+    const hasKeyboardPitch = getKeyValue(keys, keyBindings.moveUp) > 0 || getKeyValue(keys, keyBindings.moveDown) > 0;
+    const hasKeyboardRoll = getKeyValue(keys, keyBindings.moveLeft) > 0 || getKeyValue(keys, keyBindings.moveRight) > 0;
 
-    // Pitch from mouse Y movement (inverted: up = forward pitch)
-    pitch = Math.max(-1, Math.min(1, mouseDelta.y));
+    if (!hasKeyboardRoll) {
+      roll += mouseVelocity.x * 2;  // Amplify mouse for responsiveness
+    }
+    if (!hasKeyboardPitch) {
+      pitch += mouseVelocity.y * 2;
+    }
 
     // Left click for arm
-    aux1 = mouseButtons.get(0) ?? false;
-
-    // If left button held, use X for yaw instead of roll for fine control
     if (mouseButtons.get(0)) {
-      yaw = roll * 0.5;  // Yaw with left click held
-      roll = 0;
+      aux1 = true;
+      // While left click held, X becomes yaw
+      if (!hasKeyboardRoll) {
+        yaw += mouseVelocity.x;
+        roll -= mouseVelocity.x * 2;  // Remove from roll
+      }
     }
-  } else if (activeSource === 'gamepad' && activeGamepadIndex !== null) {
+  }
+
+  // === GAMEPAD INPUT ===
+  if (activeGamepadIndex !== null && (combinedInputMode || activeSource === 'gamepad')) {
     const gamepad = gamepads.get(activeGamepadIndex);
     if (gamepad) {
       // Standard gamepad mapping (Mode 2)
-      throttle = (gamepad.axes[1] !== undefined ? -gamepad.axes[1] : 0 + 1) / 2;
-      yaw = gamepad.axes[0] ?? 0;
-      pitch = gamepad.axes[3] ?? 0;
-      roll = gamepad.axes[2] ?? 0;
+      const gpThrottle = (-gamepad.axes[1] + 1) / 2;
+      const gpYaw = gamepad.axes[0] ?? 0;
+      const gpPitch = gamepad.axes[3] ?? 0;
+      const gpRoll = gamepad.axes[2] ?? 0;
 
-      aux1 = gamepad.buttons[0]?.pressed ?? false;
-      aux2 = gamepad.buttons[1]?.pressed ? 1 : gamepad.buttons[2]?.pressed ? 2 : 0;
+      // Add gamepad input
+      throttle = Math.max(throttle, gpThrottle);
+      yaw += gpYaw;
+      pitch += gpPitch;
+      roll += gpRoll;
+
+      if (gamepad.buttons[0]?.pressed) aux1 = true;
+      if (gamepad.buttons[1]?.pressed) aux2 = 1;
+      if (gamepad.buttons[2]?.pressed) aux2 = 2;
     }
   }
+
+  // === POST-PROCESSING ===
 
   // Apply deadzone and expo
   yaw = applyDeadzone(yaw, config.deadzone);
@@ -448,12 +524,17 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
   if (config.inverted.roll) roll = -roll;
   if (config.inverted.throttle) throttle = 1 - throttle;
 
-  // Clamp values
+  // Clamp final values
   throttle = Math.max(0, Math.min(1, throttle));
   yaw = Math.max(-1, Math.min(1, yaw));
   pitch = Math.max(-1, Math.min(1, pitch));
   roll = Math.max(-1, Math.min(1, roll));
   aux3 = Math.max(-1, Math.min(1, aux3));
+
+  // Determine primary source for display
+  let source: InputSource = 'keyboard';
+  if (activeSource === 'gamepad' && activeGamepadIndex !== null) source = 'gamepad';
+  else if (activeSource === 'mouse' && mouseFlightEnabled) source = 'mouse';
 
   return {
     throttle,
@@ -464,6 +545,6 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
     aux2,
     aux3,
     timestamp: performance.now(),
-    source: activeSource,
+    source,
   };
 }
