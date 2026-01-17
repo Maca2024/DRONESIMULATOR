@@ -12,6 +12,24 @@ export function HUD(): JSX.Element {
   const pauseGame = useGameStore((state) => state.pauseGame);
 
   const [fps, setFps] = useState(60);
+  const [showHelp, setShowHelp] = useState(true);
+  const [musicOn, setMusicOn] = useState(false);
+
+  // Auto-hide help after 8 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHelp(false), 8000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Toggle help with H key, track music with M key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent): void => {
+      if (e.code === 'KeyH') setShowHelp(prev => !prev);
+      if (e.code === 'KeyM') setMusicOn(prev => !prev);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   // FPS counter
   useEffect(() => {
@@ -143,6 +161,45 @@ export function HUD(): JSX.Element {
         <div className={styles.crosshairH} />
         <div className={styles.crosshairV} />
       </div>
+
+      {/* Controls Help Overlay */}
+      {showHelp && (
+        <div className={styles.helpOverlay}>
+          <div className={styles.helpTitle}>CONTROLS</div>
+          <div className={styles.helpGrid}>
+            <div className={styles.helpSection}>
+              <div className={styles.helpSectionTitle}>Flight (Mouse)</div>
+              <div className={styles.helpItem}><span>Move</span><span>Roll + Pitch</span></div>
+              <div className={styles.helpItem}><span>Scroll</span><span>Throttle</span></div>
+              <div className={styles.helpItem}><span>Left Click</span><span>Arm + Yaw</span></div>
+              <div className={styles.helpItem}><span>Right Click</span><span>Pointer Lock</span></div>
+            </div>
+            <div className={styles.helpSection}>
+              <div className={styles.helpSectionTitle}>Flight (Keyboard)</div>
+              <div className={styles.helpItem}><span>W/S</span><span>Pitch</span></div>
+              <div className={styles.helpItem}><span>A/D</span><span>Roll</span></div>
+              <div className={styles.helpItem}><span>Q/E</span><span>Yaw</span></div>
+              <div className={styles.helpItem}><span>Space/Shift</span><span>Throttle</span></div>
+            </div>
+            <div className={styles.helpSection}>
+              <div className={styles.helpSectionTitle}>Actions</div>
+              <div className={styles.helpItem}><span>R</span><span>Arm</span></div>
+              <div className={styles.helpItem}><span>C</span><span>Camera Mode</span></div>
+              <div className={styles.helpItem}><span>M</span><span>Music {musicOn ? 'ON' : 'OFF'}</span></div>
+              <div className={styles.helpItem}><span>H</span><span>Toggle Help</span></div>
+              <div className={styles.helpItem}><span>P/Esc</span><span>Pause</span></div>
+            </div>
+          </div>
+          <div className={styles.helpFooter}>Press H to hide</div>
+        </div>
+      )}
+
+      {/* Music indicator */}
+      {musicOn && (
+        <div className={styles.musicIndicator}>
+          <span>🎵</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -104,6 +104,12 @@ export class ProAudioSystem {
   // Effect buffers
   private effectBuffers: Map<string, AudioBuffer> = new Map();
 
+  // Background music
+  private musicGain: GainNode | null = null;
+  private musicOscillators: OscillatorNode[] = [];
+  private musicPlaying = false;
+  private musicInterval: ReturnType<typeof setInterval> | null = null;
+
   // State
   private isInitialized = false;
   private isMuted = false;
@@ -890,9 +896,150 @@ export class ProAudioSystem {
   }
 
   /**
+   * Play ambient background music (procedurally generated)
+   */
+  playMusic(): void {
+    if (!this.context || !this.masterGain || this.musicPlaying) return;
+
+    this.musicPlaying = true;
+
+    // Create music gain node
+    this.musicGain = this.context.createGain();
+    this.musicGain.gain.value = 0;
+    this.musicGain.connect(this.masterGain);
+
+    // Fade in
+    this.musicGain.gain.setTargetAtTime(0.15, this.context.currentTime, 0.5);
+
+    // Create ambient pad sound (peaceful, atmospheric)
+    this.createAmbientPad();
+
+    // Start arpeggio pattern
+    this.startMusicArpeggio();
+  }
+
+  /**
+   * Create ambient pad sound
+   */
+  private createAmbientPad(): void {
+    if (!this.context || !this.musicGain) return;
+
+    // C major 7 chord notes for peaceful atmosphere
+    const padNotes = [130.81, 164.81, 196.00, 246.94]; // C3, E3, G3, B3
+
+    for (const freq of padNotes) {
+      // Create multiple detuned oscillators for rich pad sound
+      for (let d = -1; d <= 1; d++) {
+        const osc = this.context.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.detune.value = d * 8; // Slight detune for chorus effect
+
+        const gain = this.context.createGain();
+        gain.gain.value = 0.03;
+
+        // Add tremolo/vibrato
+        const lfo = this.context.createOscillator();
+        const lfoGain = this.context.createGain();
+        lfo.frequency.value = 0.5 + Math.random() * 0.5;
+        lfoGain.gain.value = 0.005;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start();
+
+        osc.connect(gain);
+        gain.connect(this.musicGain);
+        osc.start();
+
+        this.musicOscillators.push(osc, lfo);
+      }
+    }
+  }
+
+  /**
+   * Start music arpeggio pattern
+   */
+  private startMusicArpeggio(): void {
+    if (!this.context || !this.musicGain) return;
+
+    // Pentatonic scale notes for pleasant melodic content
+    const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25];
+    let noteIndex = 0;
+
+    // Play notes in a pattern
+    this.musicInterval = setInterval(() => {
+      if (!this.context || !this.musicGain || !this.musicPlaying) return;
+
+      const freq = scale[noteIndex % scale.length];
+      noteIndex = (noteIndex + Math.floor(Math.random() * 3) + 1) % scale.length;
+
+      // Create a short melodic note
+      const osc = this.context.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+
+      const gain = this.context.createGain();
+      gain.gain.value = 0;
+
+      // Soft attack and release
+      const now = this.context.currentTime;
+      gain.gain.setTargetAtTime(0.08, now, 0.05);
+      gain.gain.setTargetAtTime(0, now + 0.3, 0.2);
+
+      osc.connect(gain);
+      gain.connect(this.musicGain);
+
+      osc.start();
+      osc.stop(now + 1);
+    }, 600 + Math.random() * 400); // Random timing for organic feel
+  }
+
+  /**
+   * Stop background music
+   */
+  stopMusic(): void {
+    if (!this.musicPlaying || !this.context) return;
+
+    this.musicPlaying = false;
+
+    // Fade out
+    if (this.musicGain) {
+      this.musicGain.gain.setTargetAtTime(0, this.context.currentTime, 0.5);
+    }
+
+    // Stop interval
+    if (this.musicInterval) {
+      clearInterval(this.musicInterval);
+      this.musicInterval = null;
+    }
+
+    // Stop oscillators after fade
+    setTimeout(() => {
+      for (const osc of this.musicOscillators) {
+        try {
+          osc.stop();
+        } catch {
+          // Already stopped
+        }
+      }
+      this.musicOscillators = [];
+    }, 1000);
+  }
+
+  /**
+   * Check if music is playing
+   */
+  isMusicPlaying(): boolean {
+    return this.musicPlaying;
+  }
+
+  /**
    * Clean up audio system
    */
   dispose(): void {
+    // Stop music first
+    this.stopMusic();
+
     // Stop all motor oscillators
     for (const motor of this.motors) {
       motor.fundamental.stop();

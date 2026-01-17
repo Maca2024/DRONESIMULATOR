@@ -5,14 +5,14 @@
  * - PhysicsEngine
  * - TutorialSystem
  * - MissionSystem
- * - AudioSystem
+ * - ProAudioSystem (Advanced Audio)
  */
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { PhysicsEngine } from '../core/PhysicsEngine';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import { MissionSystem } from '../systems/MissionSystem';
-import { audioSystem } from '../systems/AudioSystem';
+import { ProAudioSystem } from '../systems/ProAudioSystem';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
 import type { TutorialLevel, Vector3 } from '@shared/types';
@@ -41,12 +41,17 @@ export interface GameManagerActions {
   startMission: (missionId: string) => void;
   stopMission: () => void;
   initAudio: () => void;
+  toggleMusic: () => void;
+  setMasterVolume: (volume: number) => void;
+  isMusicPlaying: boolean;
 }
 
 export function useGameManager(): GameManagerState & GameManagerActions {
   const physics = useRef(new PhysicsEngine());
   const tutorial = useRef(new TutorialSystem());
   const mission = useRef(new MissionSystem());
+  const audioSystem = useRef(new ProAudioSystem());
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   const updateDrone = useGameStore((state) => state.updateDrone);
   const addScore = useGameStore((state) => state.addScore);
@@ -55,8 +60,35 @@ export function useGameManager(): GameManagerState & GameManagerActions {
 
   // Initialize audio on first interaction
   const initAudio = useCallback(() => {
-    audioSystem.initialize();
+    audioSystem.current.initialize();
   }, []);
+
+  // Toggle background music
+  const toggleMusic = useCallback(() => {
+    if (isMusicPlaying) {
+      audioSystem.current.stopMusic();
+      setIsMusicPlaying(false);
+    } else {
+      audioSystem.current.playMusic();
+      setIsMusicPlaying(true);
+    }
+  }, [isMusicPlaying]);
+
+  // Set master volume
+  const setMasterVolume = useCallback((volume: number) => {
+    audioSystem.current.setConfig({ masterVolume: volume });
+  }, []);
+
+  // Listen for M key to toggle music
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.code === 'KeyM' && !e.repeat) {
+        toggleMusic();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleMusic]);
 
   // Main update loop
   const update = useCallback(
@@ -82,8 +114,15 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         motorRPM: physicsState.motorRPM,
       });
 
-      // Update audio motor sounds
-      audioSystem.updateMotorSounds(physicsState.motorRPM);
+      // Update professional audio system
+      audioSystem.current.update({
+        motorRPM: physicsState.motorRPM,
+        velocity: physicsState.velocity,
+        position: physicsState.position,
+        altitude: physicsState.position.y,
+        armed: true,
+        throttle: input.throttle,
+      });
 
       // Update tutorial if active
       const tutorialProgress = tutorial.current.getProgress();
@@ -107,14 +146,14 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         // Check for new completions
         const newState = mission.current.getCurrentMissionState();
         if (newState && newState.objectivesCompleted > prevCompleted) {
-          audioSystem.playEffect('checkpoint');
+          audioSystem.current.playEffect('checkpoint');
           addScore(100);
         }
       }
 
       // Check for crash
       if (physics.current.isCrashed()) {
-        audioSystem.playEffect('crash');
+        audioSystem.current.playEffect('crash');
         crash(physicsState.position);
         mission.current.recordCrash();
       }
@@ -143,7 +182,7 @@ export function useGameManager(): GameManagerState & GameManagerActions {
     const success = mission.current.startMission(missionId);
     if (success) {
       physics.current.reset({ x: 0, y: 1, z: 0 });
-      audioSystem.playEffect('arm');
+      audioSystem.current.playEffect('arm');
     }
     return success;
   }, []);
@@ -151,13 +190,13 @@ export function useGameManager(): GameManagerState & GameManagerActions {
   // Stop current mission
   const stopMission = useCallback(() => {
     mission.current.abortMission();
-    audioSystem.playEffect('disarm');
+    audioSystem.current.playEffect('disarm');
   }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      audioSystem.dispose();
+      audioSystem.current.dispose();
     };
   }, []);
 
@@ -171,5 +210,8 @@ export function useGameManager(): GameManagerState & GameManagerActions {
     startMission,
     stopMission,
     initAudio,
+    toggleMusic,
+    setMasterVolume,
+    isMusicPlaying,
   };
 }

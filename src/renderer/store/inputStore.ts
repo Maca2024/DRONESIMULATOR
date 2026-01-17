@@ -20,8 +20,12 @@ interface InputState {
 
   // Mouse state
   mousePosition: { x: number; y: number };
+  mouseDelta: { x: number; y: number };
   mouseButtons: Map<number, boolean>;
   mouseWheel: number;
+  mouseThrottle: number;
+  mouseFlightEnabled: boolean;
+  pointerLocked: boolean;
 
   // Gamepad state
   gamepads: Map<number, Gamepad>;
@@ -38,6 +42,8 @@ interface InputState {
   setActiveSource: (source: InputSource) => void;
   setConfig: (config: Partial<InputConfig>) => void;
   getInput: () => NormalizedInput;
+  enableMouseFlight: (enable: boolean) => void;
+  requestPointerLock: () => void;
 }
 
 const createEmptyInput = (): NormalizedInput => ({
@@ -57,8 +63,12 @@ export const useInputStore = create<InputState>((set, get) => ({
   activeSource: 'keyboard',
   keys: new Map(),
   mousePosition: { x: 0, y: 0 },
+  mouseDelta: { x: 0, y: 0 },
   mouseButtons: new Map(),
   mouseWheel: 0,
+  mouseThrottle: 0,
+  mouseFlightEnabled: true,
+  pointerLocked: false,
   gamepads: new Map(),
   activeGamepadIndex: null,
   config: {
@@ -107,12 +117,32 @@ export const useInputStore = create<InputState>((set, get) => ({
       set({ keys: newKeys });
     };
 
-    // Mouse events
+    // Mouse events for full flight control
     const handleMouseMove = (e: MouseEvent): void => {
-      set({
-        mousePosition: { x: e.clientX, y: e.clientY },
-        activeSource: 'mouse',
-      });
+      const state = get();
+
+      if (state.pointerLocked) {
+        // Use movement delta for flight control when pointer is locked
+        set({
+          mouseDelta: {
+            x: state.mouseDelta.x + e.movementX * 0.002,
+            y: state.mouseDelta.y + e.movementY * 0.002
+          },
+          activeSource: 'mouse',
+        });
+      } else {
+        // Use screen position when not locked
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        const normalizedX = (e.clientX - centerX) / centerX;
+        const normalizedY = (e.clientY - centerY) / centerY;
+
+        set({
+          mousePosition: { x: e.clientX, y: e.clientY },
+          mouseDelta: { x: normalizedX, y: normalizedY },
+          activeSource: 'mouse',
+        });
+      }
     };
 
     const handleMouseDown = (e: MouseEvent): void => {
@@ -120,6 +150,11 @@ export const useInputStore = create<InputState>((set, get) => ({
       const newButtons = new Map(state.mouseButtons);
       newButtons.set(e.button, true);
       set({ mouseButtons: newButtons, activeSource: 'mouse' });
+
+      // Right click to lock pointer for flight
+      if (e.button === 2 && state.mouseFlightEnabled) {
+        document.body.requestPointerLock();
+      }
     };
 
     const handleMouseUp = (e: MouseEvent): void => {
@@ -132,9 +167,24 @@ export const useInputStore = create<InputState>((set, get) => ({
     const handleWheel = (e: WheelEvent): void => {
       const delta = Math.sign(e.deltaY) * INPUT.SCROLL_THROTTLE_STEP;
       set((state) => ({
-        mouseWheel: Math.max(0, Math.min(1, state.input.throttle - delta)),
+        mouseThrottle: Math.max(0, Math.min(1, state.mouseThrottle - delta)),
         activeSource: 'mouse',
       }));
+      e.preventDefault();
+    };
+
+    // Pointer lock change handler
+    const handlePointerLockChange = (): void => {
+      const locked = document.pointerLockElement === document.body;
+      set({ pointerLocked: locked });
+      if (!locked) {
+        // Reset mouse delta when unlocking
+        set({ mouseDelta: { x: 0, y: 0 } });
+      }
+    };
+
+    // Context menu prevention
+    const handleContextMenu = (e: MouseEvent): void => {
       e.preventDefault();
     };
 
@@ -179,6 +229,8 @@ export const useInputStore = create<InputState>((set, get) => ({
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
+    document.addEventListener('pointerlockchange', handlePointerLockChange);
+    window.addEventListener('contextmenu', handleContextMenu);
 
     // Store cleanup function
     const cleanup = (): void => {
@@ -190,6 +242,11 @@ export const useInputStore = create<InputState>((set, get) => ({
       window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('gamepadconnected', handleGamepadConnected);
       window.removeEventListener('gamepaddisconnected', handleGamepadDisconnected);
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      window.removeEventListener('contextmenu', handleContextMenu);
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      }
     };
 
     // Store cleanup in window for later
@@ -257,6 +314,14 @@ export const useInputStore = create<InputState>((set, get) => ({
     })),
 
   getInput: () => get().input,
+
+  enableMouseFlight: (enable) => set({ mouseFlightEnabled: enable }),
+
+  requestPointerLock: () => {
+    if (get().mouseFlightEnabled) {
+      document.body.requestPointerLock();
+    }
+  },
 }));
 
 // Helper functions
@@ -289,7 +354,7 @@ function applyDeadzone(value: number, deadzone: number): number {
 }
 
 function calculateNormalizedInput(state: InputState): NormalizedInput {
-  const { keys, keyBindings, config, activeSource, gamepads, activeGamepadIndex, mouseWheel } = state;
+  const { keys, keyBindings, config, activeSource, gamepads, activeGamepadIndex, mouseThrottle, mouseDelta, mouseButtons, mouseFlightEnabled } = state;
 
   let throttle = 0;
   let yaw = 0;
@@ -327,8 +392,28 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
     const camUp = getKeyValue(keys, keyBindings.cameraUp);
     const camDown = getKeyValue(keys, keyBindings.cameraDown);
     aux3 = camUp - camDown;
-  } else if (activeSource === 'mouse') {
-    throttle = Math.max(0, Math.min(1, mouseWheel));
+  } else if (activeSource === 'mouse' && mouseFlightEnabled) {
+    // Full mouse flight control
+    // Mouse X = Roll, Mouse Y = Pitch
+    // Left click = Arm, Right click = Yaw (or pointer lock)
+    // Scroll wheel = Throttle
+
+    throttle = mouseThrottle;
+
+    // Roll from mouse X movement
+    roll = Math.max(-1, Math.min(1, mouseDelta.x));
+
+    // Pitch from mouse Y movement (inverted: up = forward pitch)
+    pitch = Math.max(-1, Math.min(1, mouseDelta.y));
+
+    // Left click for arm
+    aux1 = mouseButtons.get(0) ?? false;
+
+    // If left button held, use X for yaw instead of roll for fine control
+    if (mouseButtons.get(0)) {
+      yaw = roll * 0.5;  // Yaw with left click held
+      roll = 0;
+    }
   } else if (activeSource === 'gamepad' && activeGamepadIndex !== null) {
     const gamepad = gamepads.get(activeGamepadIndex);
     if (gamepad) {
