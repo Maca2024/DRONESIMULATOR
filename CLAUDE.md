@@ -15,6 +15,33 @@
 
 ```
 
+## RECENT CHANGES (January 2026)
+
+### Bug Fixes Applied
+- **WebGL Detection**: Added WebGL support check with user-friendly error screen
+- **PostProcessing Disabled**: Disabled postprocessing effects due to browser compatibility issues
+- **Auto-Arm on Start**: Drone is now automatically armed when starting a game (no need to press R)
+- **Audio Initialization**: Audio now initializes on first menu button click
+- **Input Handler Fix**: Fixed keyboard input being disabled by mouse movement
+- **Event Listener Fix**: Added event listeners on both window and document with capture phase
+
+### Known Issues
+- **PostProcessing**: Disabled due to WebGL context errors in some browsers
+- **Controls**: May need to click on game window to focus before controls work
+
+### Files Modified
+| File | Changes |
+|------|---------|
+| `App.tsx` | WebGL detection, hooks order fix, Canvas focus fix |
+| `PostProcessingEffects.tsx` | Disabled (returns null) |
+| `gameStore.ts` | Auto-arm drone on game start |
+| `inputStore.ts` | Event listeners on window+document, prevent double init |
+| `GameScene.tsx` | Input initialization on mount |
+| `MainMenu.tsx` | Audio initialization on button click |
+| `HUD.tsx` | Debug display for Roll/Pitch/Yaw values |
+
+---
+
 ## IMMEDIATE START GUIDE
 
 ### Step 1: What is Aetherwing?

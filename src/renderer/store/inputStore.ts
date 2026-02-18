@@ -92,6 +92,15 @@ export const useInputStore = create<InputState>((set, get) => ({
   keyBindings: { ...DEFAULT_KEY_BINDINGS },
 
   initialize: () => {
+    // Prevent double initialization
+    if ((window as Window & { __inputInitialized?: boolean }).__inputInitialized) {
+      console.log('InputStore: Already initialized, skipping...');
+      return;
+    }
+    (window as Window & { __inputInitialized?: boolean }).__inputInitialized = true;
+
+    console.log('InputStore: Initializing input handlers...');
+
     // Keyboard events
     const handleKeyDown = (e: KeyboardEvent): void => {
       const state = get();
@@ -105,6 +114,11 @@ export const useInputStore = create<InputState>((set, get) => ({
           value: INPUT.TAP_INPUT_PERCENT,
         });
         set({ keys: newKeys, activeSource: 'keyboard' });
+
+        // Debug log for game keys
+        if (isGameKey(e.code, state.keyBindings)) {
+          console.log(`InputStore: Key pressed: ${e.code}`);
+        }
       }
 
       // Prevent default for game keys
@@ -126,36 +140,11 @@ export const useInputStore = create<InputState>((set, get) => ({
 
     // Mouse events for full flight control
     const handleMouseMove = (e: MouseEvent): void => {
-      const state = get();
-      const now = performance.now();
-
-      if (state.pointerLocked) {
-        // Use movement delta for flight control when pointer is locked
-        // Direct velocity from mouse movement (will decay in update)
-        const sensitivity = 0.003;
-        set({
-          mouseVelocity: {
-            x: Math.max(-1, Math.min(1, e.movementX * sensitivity)),
-            y: Math.max(-1, Math.min(1, e.movementY * sensitivity))
-          },
-          lastMouseMoveTime: now,
-          activeSource: 'mouse',
-        });
-      } else {
-        // Use screen position when not locked - position-based control
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        const normalizedX = (e.clientX - centerX) / centerX;
-        const normalizedY = (e.clientY - centerY) / centerY;
-
-        set({
-          mousePosition: { x: e.clientX, y: e.clientY },
-          mouseDelta: { x: normalizedX, y: normalizedY },
-          mouseVelocity: { x: normalizedX, y: normalizedY },
-          lastMouseMoveTime: now,
-          activeSource: 'mouse',
-        });
-      }
+      // Only update position, don't change activeSource on mouse move
+      // This prevents mouse movement from disabling keyboard controls
+      set({
+        mousePosition: { x: e.clientX, y: e.clientY },
+      });
     };
 
     const handleMouseDown = (e: MouseEvent): void => {
@@ -233,9 +222,9 @@ export const useInputStore = create<InputState>((set, get) => ({
       console.info(`Gamepad disconnected: ${e.gamepad.id}`);
     };
 
-    // Register events
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // Register events on window with capture phase for priority
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    window.addEventListener('keyup', handleKeyUp, { capture: true });
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
@@ -244,6 +233,8 @@ export const useInputStore = create<InputState>((set, get) => ({
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
     document.addEventListener('pointerlockchange', handlePointerLockChange);
     window.addEventListener('contextmenu', handleContextMenu);
+
+    console.log('InputStore: Event listeners registered');
 
     // Store cleanup function
     const cleanup = (): void => {
@@ -406,18 +397,16 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
   let aux2 = 0;
   let aux3 = 0;
 
-  // === KEYBOARD INPUT ===
-  const keyboardActive = combinedInputMode || activeSource === 'keyboard';
-  if (keyboardActive) {
-    // Throttle: Space increases, Shift decreases from current mouse throttle
+  // Always check keyboard input first - keyboard should always work regardless of activeSource
+  // This fixes the bug where mouse movement would disable keyboard controls
+  const hasKeyboardInput = Array.from(keys.values()).some(k => k.pressed || k.value > 0);
+
+  if (hasKeyboardInput || activeSource === 'keyboard') {
+    // Calculate from keyboard
     const thrustUp = getKeyValue(keys, keyBindings.thrustUp);
     const thrustDown = getKeyValue(keys, keyBindings.thrustDown);
-
-    if (thrustUp > 0 || thrustDown > 0) {
-      // Keyboard directly controls throttle
-      throttle = thrustUp - thrustDown * 0.8;
-      throttle = Math.max(0, Math.min(1, throttle));
-    }
+    // SPACE increases throttle (0→1), SHIFT decreases it
+    throttle = Math.max(0, Math.min(1, thrustUp - thrustDown));
 
     // Yaw
     const yawLeft = getKeyValue(keys, keyBindings.yawLeft);
@@ -485,16 +474,11 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
     const gamepad = gamepads.get(activeGamepadIndex);
     if (gamepad) {
       // Standard gamepad mapping (Mode 2)
-      const gpThrottle = (-gamepad.axes[1] + 1) / 2;
-      const gpYaw = gamepad.axes[0] ?? 0;
-      const gpPitch = gamepad.axes[3] ?? 0;
-      const gpRoll = gamepad.axes[2] ?? 0;
-
-      // Add gamepad input
-      throttle = Math.max(throttle, gpThrottle);
-      yaw += gpYaw;
-      pitch += gpPitch;
-      roll += gpRoll;
+      // Gamepad takes precedence - fixes throttle precedence bug
+      throttle = (gamepad.axes[1] !== undefined ? -gamepad.axes[1] + 1 : 1) / 2;
+      yaw = gamepad.axes[0] ?? 0;
+      pitch = gamepad.axes[3] ?? 0;
+      roll = gamepad.axes[2] ?? 0;
 
       if (gamepad.buttons[0]?.pressed) aux1 = true;
       if (gamepad.buttons[1]?.pressed) aux2 = 1;

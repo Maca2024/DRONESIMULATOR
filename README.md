@@ -196,7 +196,34 @@ npm run dev
 
 The development server will start at `http://localhost:5173`.
 
-### Desktop Application
+### Troubleshooting
+
+#### WebGL Not Working
+
+If you see a "WebGL Not Available" error:
+
+1. **Enable Hardware Acceleration:**
+   - Chrome/Brave: Go to `chrome://settings/system` → Enable "Use graphics acceleration when available"
+   - Firefox: Go to `about:config` → Set `webgl.force-enabled` to `true`
+
+2. **Update Graphics Drivers:**
+   - Download latest drivers from NVIDIA, AMD, or Intel
+
+3. **Browser Flags (Chrome/Brave):**
+   - Go to `chrome://flags`
+   - Enable "Override software rendering list"
+   - Enable "WebGL Draft Extensions"
+   - Click "Relaunch"
+
+4. **Test WebGL:** Visit https://get.webgl.org/ to verify WebGL is working
+
+#### Controls Not Responding
+
+- Make sure the browser window is focused (click on the game)
+- Check browser console (F12) for errors
+- The drone is automatically armed - just press SPACE to fly!
+
+### Desktop Application (Electron)
 
 ```bash
 # Build and run Electron app
@@ -237,19 +264,27 @@ Aetherwing features **Combined Input Mode** where all input devices work simulta
 
 ### Keyboard Controls
 
-| Key | Action |
-|-----|--------|
-| **W / S** | Pitch forward / backward |
-| **A / D** | Roll left / right |
-| **Q / E** | Yaw left / right |
-| **Space** | Increase throttle |
-| **Shift** | Decrease throttle |
-| **R** | Arm / Disarm motors |
-| **C** | Cycle camera modes |
-| **M** | Toggle background music |
-| **H** | Toggle controls help overlay |
-| **P / Esc** | Pause game |
-| **1 / 2 / 3** | Angle / Horizon / Acro mode |
+> **Note:** The drone is now **automatically armed** when you start a game. No need to press R first!
+
+| Action | Primary Key | Alternative |
+|--------|-------------|-------------|
+| **Pitch Forward** | W | Arrow Up |
+| **Pitch Backward** | S | Arrow Down |
+| **Roll Left** | A | Arrow Left |
+| **Roll Right** | D | Arrow Right |
+| **Throttle Up** | Space | - |
+| **Throttle Down** | Shift | - |
+| **Yaw Left** | Q | - |
+| **Yaw Right** | E | - |
+| **Arm Drone** | R | - |
+| **Disarm Drone** | T | - |
+| **Angle Mode** | 1 | - |
+| **Horizon Mode** | 2 | - |
+| **Acro Mode** | 3 | - |
+| **Cycle Camera** | C | - |
+| **Toggle Music** | M | - |
+| **Toggle Help** | H | - |
+| **Pause** | P | Escape |
 
 ### Mouse Controls
 
