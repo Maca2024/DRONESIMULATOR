@@ -29,7 +29,7 @@ interface GameState {
   // Actions
   setScreen: (screen: GameScreen) => void;
   goBack: () => void;
-  startGame: (mode: 'freePlay' | 'mission', mission?: Mission) => void;
+  startGame: (mode: 'freePlay' | 'mission' | 'tutorial', mission?: Mission) => void;
   pauseGame: () => void;
   resumeGame: () => void;
   endGame: () => void;
@@ -83,7 +83,7 @@ export const useGameStore = create<GameState>((set) => ({
   // Game flow
   startGame: (mode, mission) =>
     set({
-      currentScreen: mode === 'freePlay' ? 'freePlay' : 'mission',
+      currentScreen: mode === 'freePlay' ? 'freePlay' : mode === 'tutorial' ? 'tutorial' : 'mission',
       isPlaying: true,
       isPaused: false,
       gameTime: 0,
@@ -95,15 +95,16 @@ export const useGameStore = create<GameState>((set) => ({
     }),
 
   pauseGame: () =>
-    set({
+    set((state) => ({
       isPaused: true,
+      previousScreen: state.currentScreen,
       currentScreen: 'pause',
-    }),
+    })),
 
   resumeGame: () =>
     set((state) => ({
       isPaused: false,
-      currentScreen: state.currentMission ? 'mission' : 'freePlay',
+      currentScreen: state.previousScreen === 'tutorial' ? 'tutorial' : state.currentMission ? 'mission' : 'freePlay',
     })),
 
   endGame: () =>

@@ -36,8 +36,7 @@ export function MainMenu(): JSX.Element {
     initAudioOnce();
     // Store selected level for tutorial system
     sessionStorage.setItem('tutorialLevel', level);
-    startGame('freePlay'); // Uses freePlay screen with tutorial overlay
-    setScreen('tutorial');
+    startGame('tutorial');
   };
 
   const handleMissionSelect = (mission: Mission): void => {

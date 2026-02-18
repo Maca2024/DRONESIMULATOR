@@ -1,14 +1,33 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+// Mock localStorage for zustand persist middleware
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: (index: number) => Object.keys(store)[index] ?? null,
+  };
+})();
+Object.defineProperty(global, 'localStorage', { value: localStorageMock, writable: true });
+
 // Mock performance.now for consistent testing
-const mockPerformanceNow = vi.fn(() => 0);
+let mockTime = 0;
+const mockPerformanceNow = vi.fn(() => mockTime);
 Object.defineProperty(global, 'performance', {
   value: {
     now: mockPerformanceNow,
   },
   writable: true,
 });
+
+// Helper to advance mock time (exported for tests that need it)
+(global as Record<string, unknown>).__setMockTime = (t: number) => { mockTime = t; };
+(global as Record<string, unknown>).__advanceMockTime = (dt: number) => { mockTime += dt; };
 
 // Mock requestAnimationFrame
 global.requestAnimationFrame = (callback: FrameRequestCallback): number => {

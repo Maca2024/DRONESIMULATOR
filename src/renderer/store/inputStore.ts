@@ -185,11 +185,9 @@ export const useInputStore = create<InputState>((set, get) => ({
       console.info(`Gamepad disconnected: ${e.gamepad.id}`);
     };
 
-    // Register events on both window and document for maximum compatibility
+    // Register events on window with capture phase for priority
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     window.addEventListener('keyup', handleKeyUp, { capture: true });
-    document.addEventListener('keydown', handleKeyDown, { capture: true });
-    document.addEventListener('keyup', handleKeyUp, { capture: true });
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
@@ -197,7 +195,7 @@ export const useInputStore = create<InputState>((set, get) => ({
     window.addEventListener('gamepadconnected', handleGamepadConnected);
     window.addEventListener('gamepaddisconnected', handleGamepadDisconnected);
 
-    console.log('InputStore: Event listeners registered on window and document');
+    console.log('InputStore: Event listeners registered');
 
     // Store cleanup function
     const cleanup = (): void => {
@@ -326,8 +324,8 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
     // Calculate from keyboard
     const thrustUp = getKeyValue(keys, keyBindings.thrustUp);
     const thrustDown = getKeyValue(keys, keyBindings.thrustDown);
-    throttle = thrustUp - thrustDown * 0.5;
-    throttle = Math.max(0, Math.min(1, (throttle + 1) / 2));
+    // SPACE increases throttle (0→1), SHIFT decreases it
+    throttle = Math.max(0, Math.min(1, thrustUp - thrustDown));
 
     const yawLeft = getKeyValue(keys, keyBindings.yawLeft);
     const yawRight = getKeyValue(keys, keyBindings.yawRight);
@@ -356,7 +354,7 @@ function calculateNormalizedInput(state: InputState): NormalizedInput {
     const gamepad = gamepads.get(activeGamepadIndex);
     if (gamepad) {
       // Standard gamepad mapping (Mode 2)
-      throttle = (gamepad.axes[1] !== undefined ? -gamepad.axes[1] : 0 + 1) / 2;
+      throttle = (gamepad.axes[1] !== undefined ? -gamepad.axes[1] + 1 : 1) / 2;
       yaw = gamepad.axes[0] ?? 0;
       pitch = gamepad.axes[3] ?? 0;
       roll = gamepad.axes[2] ?? 0;
