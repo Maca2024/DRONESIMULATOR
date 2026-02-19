@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
@@ -80,10 +80,27 @@ export const DroneModel: React.FC<DroneModelProps> = ({
     opacity: 0.9,
   }), []);
 
+  // Blur disc material for high RPM propellers
+  const blurDiscMaterial = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#ff6b6b',
+    transparent: true,
+    opacity: 0.2,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  }), []);
+
+  // Blur disc geometry (ring shape)
+  const blurDiscGeometry = useMemo(() => new THREE.RingGeometry(0.01, 0.085, 32), []);
+
+  // Track which propellers should show blur disc
+  const [propBlur, setPropBlur] = useState<boolean[]>([false, false, false, false]);
+
   const ledColors = ['#00ff00', '#ff0000', '#ff0000', '#00ff00']; // Front green, back red
 
   // Animate propellers
   useFrame((_, delta) => {
+    const newBlur = [false, false, false, false];
+
     propellerRefs.forEach((ref, index) => {
       if (ref.current) {
         const rpm = motorRPM[index];
@@ -91,8 +108,27 @@ export const DroneModel: React.FC<DroneModelProps> = ({
         // Alternate rotation direction for stability
         const direction = index % 2 === 0 ? 1 : -1;
         ref.current.rotation.y += rotationSpeed * direction;
+
+        // Show blur disc at high RPM, hide blades
+        if (rpm > 3000) {
+          newBlur[index] = true;
+          ref.current.visible = false;
+        } else {
+          ref.current.visible = true;
+        }
       }
     });
+
+    // Only update state if changed
+    if (newBlur.some((v, i) => v !== propBlur[i])) {
+      setPropBlur(newBlur);
+    }
+
+    // Update blur disc opacity based on RPM
+    if (blurDiscMaterial) {
+      const avgRPM = motorRPM.reduce((a, b) => a + b, 0) / 4;
+      blurDiscMaterial.opacity = 0.15 + (avgRPM / 25000) * 0.3;
+    }
 
     // Pulse motor lights based on armed state
     motorLightRefs.forEach((ref, index) => {
@@ -178,6 +214,16 @@ export const DroneModel: React.FC<DroneModelProps> = ({
             <mesh geometry={propellerGeometry} material={propellerMaterial} rotation={[Math.PI / 2, 0, 0]} />
             <mesh geometry={propellerGeometry} material={propellerMaterial} rotation={[Math.PI / 2, 0, Math.PI]} />
           </group>
+
+          {/* Propeller blur disc (visible at high RPM) */}
+          {propBlur[index] && (
+            <mesh
+              position={[pos[0], pos[1] + 0.022, pos[2]]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              geometry={blurDiscGeometry}
+              material={blurDiscMaterial}
+            />
+          )}
 
           {/* LED lights */}
           <mesh position={[pos[0], pos[1] - 0.015, pos[2]]}>

@@ -87,7 +87,7 @@ export class PhysicsEngine {
    * @param dt - Delta time in seconds
    * @param droneConfig - Optional drone configuration
    */
-  update(input: NormalizedInput, dt: number, droneConfig?: DroneConfig): void {
+  update(input: NormalizedInput, dt: number, droneConfig?: DroneConfig, windForce?: Vector3): void {
     // Apply drone config rates if provided
     const rates = droneConfig?.rates ?? { roll: 400, pitch: 400, yaw: 300 };
 
@@ -118,11 +118,14 @@ export class PhysicsEngine {
     const groundEffectMultiplier = this.calculateGroundEffect();
     thrustWorld.y *= groundEffectMultiplier;
 
+    // Wind force (defaults to zero if not provided)
+    const wind = windForce ?? { x: 0, y: 0, z: 0 };
+
     // Sum forces
     const totalForce: Vector3 = {
-      x: thrustWorld.x + gravity.x + drag.x,
-      y: thrustWorld.y + gravity.y + drag.y,
-      z: thrustWorld.z + gravity.z + drag.z,
+      x: thrustWorld.x + gravity.x + drag.x + wind.x * this.config.mass,
+      y: thrustWorld.y + gravity.y + drag.y + wind.y * this.config.mass,
+      z: thrustWorld.z + gravity.z + drag.z + wind.z * this.config.mass,
     };
 
     // Calculate acceleration (F = ma)

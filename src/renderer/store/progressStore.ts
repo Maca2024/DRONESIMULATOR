@@ -1,14 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { PlayerProgress, TutorialLevel } from '@shared/types';
+import type { PlayerProgress, TutorialLevel, GhostFrame } from '@shared/types';
 
 interface ProgressState {
   progress: PlayerProgress;
+  ghostData: Record<string, GhostFrame[]>;
+  bestTrickCombo: number;
+  totalTricksPerformed: number;
   addXP: (amount: number) => void;
   completeTutorial: (level: TutorialLevel) => void;
   completeMission: (missionId: string) => void;
   addAchievement: (achievementId: string) => void;
   updateStatistics: (stats: Partial<PlayerProgress['statistics']>) => void;
+  saveGhostData: (courseId: string, data: GhostFrame[]) => void;
+  recordTrick: (combo: number) => void;
   resetProgress: () => void;
 }
 
@@ -40,6 +45,9 @@ export const useProgressStore = create<ProgressState>()(
   persist(
     (set) => ({
       progress: { ...initialProgress },
+      ghostData: {},
+      bestTrickCombo: 0,
+      totalTricksPerformed: 0,
 
       addXP: (amount) =>
         set((state) => {
@@ -97,9 +105,23 @@ export const useProgressStore = create<ProgressState>()(
           },
         })),
 
+      saveGhostData: (courseId, data) =>
+        set((state) => ({
+          ghostData: { ...state.ghostData, [courseId]: data },
+        })),
+
+      recordTrick: (combo) =>
+        set((state) => ({
+          totalTricksPerformed: state.totalTricksPerformed + 1,
+          bestTrickCombo: Math.max(state.bestTrickCombo, combo),
+        })),
+
       resetProgress: () =>
         set({
           progress: { ...initialProgress },
+          ghostData: {},
+          bestTrickCombo: 0,
+          totalTricksPerformed: 0,
         }),
     }),
     {

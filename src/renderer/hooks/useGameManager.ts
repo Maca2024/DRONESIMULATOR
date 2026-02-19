@@ -6,6 +6,9 @@
  * - TutorialSystem
  * - MissionSystem
  * - ProAudioSystem (Advanced Audio)
+ * - WeatherSystem (Wind & Weather)
+ * - TrickDetector (Freestyle tricks)
+ * - RaceSystem (Neon Race mode)
  */
 
 import { useRef, useEffect, useCallback, useState } from 'react';
@@ -13,9 +16,14 @@ import { PhysicsEngine } from '../core/PhysicsEngine';
 import { TutorialSystem } from '../systems/TutorialSystem';
 import { MissionSystem } from '../systems/MissionSystem';
 import { ProAudioSystem } from '../systems/ProAudioSystem';
+import { WeatherSystem } from '../systems/WeatherSystem';
+import { TrickDetector } from '../systems/TrickDetector';
+import { RaceSystem } from '../systems/RaceSystem';
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
-import type { TutorialLevel, Vector3 } from '@shared/types';
+import { useProgressStore } from '../store/progressStore';
+import { TRICK_SCORES } from '@shared/constants';
+import type { TutorialLevel, Vector3, WeatherPreset, WeatherState } from '@shared/types';
 
 export interface UpdateResult {
   physicsState: {
@@ -44,6 +52,11 @@ export interface GameManagerActions {
   toggleMusic: () => void;
   setMasterVolume: (volume: number) => void;
   isMusicPlaying: boolean;
+  setWeatherPreset: (preset: WeatherPreset) => void;
+  setTimeOfDay: (time: number) => void;
+  getWeatherState: () => WeatherState;
+  startNeonRace: () => void;
+  stopRace: () => void;
 }
 
 export function useGameManager(): GameManagerState & GameManagerActions {
@@ -51,18 +64,43 @@ export function useGameManager(): GameManagerState & GameManagerActions {
   const tutorial = useRef(new TutorialSystem());
   const mission = useRef(new MissionSystem());
   const audioSystem = useRef(new ProAudioSystem());
+  const weatherSystem = useRef(new WeatherSystem());
+  const trickDetector = useRef(new TrickDetector());
+  const raceSystem = useRef(new RaceSystem());
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
 
   const updateDrone = useGameStore((state) => state.updateDrone);
   const addScore = useGameStore((state) => state.addScore);
   const crash = useGameStore((state) => state.crash);
   const isArmed = useGameStore((state) => state.drone.isArmed);
+  const currentScreen = useGameStore((state) => state.currentScreen);
+  const setRaceState = useGameStore((state) => state.setRaceState);
+  const showTrickPopup = useGameStore((state) => state.showTrickPopup);
   const getInput = useInputStore((state) => state.getInput);
+  const recordTrick = useProgressStore((state) => state.recordTrick);
+
+  // Wire trick detector callback
+  useEffect(() => {
+    let trickIdCounter = 0;
+    trickDetector.current.setOnTrick((event) => {
+      const trickInfo = TRICK_SCORES[event.type];
+      addScore(event.score);
+      showTrickPopup({
+        name: trickInfo.name,
+        score: event.score,
+        combo: event.combo,
+        multiplier: event.multiplier,
+        tier: event.tier,
+        id: trickIdCounter++,
+      });
+      recordTrick(event.combo);
+      audioSystem.current.playEffect('checkpoint'); // reuse checkpoint sound for trick
+    });
+  }, [addScore, showTrickPopup, recordTrick]);
 
   // Initialize audio on first interaction
   const initAudio = useCallback(() => {
     audioSystem.current.initialize();
-    // Resume the audio context - required by Web Audio API after user interaction
     void audioSystem.current.resume();
   }, []);
 
@@ -82,6 +120,31 @@ export function useGameManager(): GameManagerState & GameManagerActions {
     audioSystem.current.setConfig({ masterVolume: volume });
   }, []);
 
+  // Weather controls
+  const setWeatherPreset = useCallback((preset: WeatherPreset) => {
+    weatherSystem.current.setPreset(preset);
+  }, []);
+
+  const setTimeOfDay = useCallback((time: number) => {
+    weatherSystem.current.setTimeOfDay(time);
+  }, []);
+
+  const getWeatherState = useCallback(() => {
+    return weatherSystem.current.getState();
+  }, []);
+
+  // Race controls
+  const startNeonRace = useCallback(() => {
+    const course = RaceSystem.getDefaultCourse();
+    raceSystem.current.startRace(course);
+    setRaceState(raceSystem.current.getState());
+  }, [setRaceState]);
+
+  const stopRace = useCallback(() => {
+    raceSystem.current.stopRace();
+    setRaceState(null);
+  }, [setRaceState]);
+
   // Listen for M key to toggle music
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
@@ -92,6 +155,16 @@ export function useGameManager(): GameManagerState & GameManagerActions {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleMusic]);
+
+  // Auto-start race when entering neonRace mode
+  useEffect(() => {
+    if (currentScreen === 'neonRace') {
+      startNeonRace();
+      trickDetector.current.reset();
+    } else if (currentScreen === 'freestyle') {
+      trickDetector.current.reset();
+    }
+  }, [currentScreen, startNeonRace]);
 
   // Main update loop
   const update = useCallback(
@@ -107,15 +180,20 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         roll: 0,
       };
 
+      // Update weather system
+      weatherSystem.current.update(dt);
+      const windForce = weatherSystem.current.getWindForce();
+
       // Run physics at higher frequency for stability
       const physicsSteps = 4;
       const physicsStep = dt / physicsSteps;
       for (let i = 0; i < physicsSteps; i++) {
-        physics.current.update(input, physicsStep);
+        physics.current.update(input, physicsStep, undefined, windForce);
       }
 
       // Get physics state
       const physicsState = physics.current.getState();
+      const euler = physics.current.getEulerAngles();
 
       // Update drone state in store
       updateDrone({
@@ -126,6 +204,35 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         motorRPM: physicsState.motorRPM,
       });
 
+      // Feed trick detector in freestyle and neonRace modes
+      if (currentScreen === 'freestyle' || currentScreen === 'neonRace' || currentScreen === 'freePlay') {
+        trickDetector.current.addFrame({
+          timestamp: performance.now(),
+          position: physicsState.position,
+          velocity: physicsState.velocity,
+          euler,
+          altitude: physicsState.position.y,
+        });
+      }
+
+      // Update race system in neonRace mode
+      if (currentScreen === 'neonRace') {
+        const raceResult = raceSystem.current.update(dt, physicsState.position, euler);
+        setRaceState(raceSystem.current.getState());
+
+        if (raceResult.checkpointPassed) {
+          audioSystem.current.playEffect('checkpoint');
+          addScore(200);
+        }
+        if (raceResult.lapComplete) {
+          audioSystem.current.playEffect('success');
+          addScore(1000);
+        }
+        if (raceResult.raceComplete) {
+          audioSystem.current.playEffect('success');
+        }
+      }
+
       // Update professional audio system
       audioSystem.current.update({
         motorRPM: physicsState.motorRPM,
@@ -135,6 +242,20 @@ export function useGameManager(): GameManagerState & GameManagerActions {
         armed: true,
         throttle: input.throttle,
       });
+
+      // Reactive audio: adjust intensity based on flight dynamics
+      const speed = Math.sqrt(
+        physicsState.velocity.x ** 2 +
+        physicsState.velocity.y ** 2 +
+        physicsState.velocity.z ** 2
+      );
+      const speedFactor = Math.min(speed / 30, 1);
+      const altFactor = Math.min(physicsState.position.y / 50, 1);
+      const intensity = speedFactor * 0.6 + altFactor * 0.2 + input.throttle * 0.2;
+      audioSystem.current.setGameIntensity(intensity);
+
+      // Update wind audio
+      audioSystem.current.setWindOverride(weatherSystem.current.getWindSpeed());
 
       // Update tutorial if active
       const tutorialProgress = tutorial.current.getProgress();
@@ -172,15 +293,16 @@ export function useGameManager(): GameManagerState & GameManagerActions {
 
       return {
         physicsState,
-        euler: physics.current.getEulerAngles(),
+        euler,
       };
     },
-    [getInput, updateDrone, addScore, crash, isArmed]
+    [getInput, updateDrone, addScore, crash, isArmed, currentScreen, setRaceState]
   );
 
   // Reset physics
   const reset = useCallback((position?: { x: number; y: number; z: number }) => {
     physics.current.reset(position);
+    trickDetector.current.reset();
   }, []);
 
   // Start tutorial level
@@ -225,5 +347,10 @@ export function useGameManager(): GameManagerState & GameManagerActions {
     toggleMusic,
     setMasterVolume,
     isMusicPlaying,
+    setWeatherPreset,
+    setTimeOfDay,
+    getWeatherState,
+    startNeonRace,
+    stopRace,
   };
 }

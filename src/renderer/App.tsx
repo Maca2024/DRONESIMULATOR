@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
 import { useGameStore } from './store/gameStore';
 import { useInputStore } from './store/inputStore';
 import { useSettingsStore } from './store/settingsStore';
@@ -12,6 +13,8 @@ import { LoadingScreen } from './ui/LoadingScreen';
 import { TutorialOverlay } from './ui/TutorialOverlay';
 import { MissionHUD } from './ui/MissionHUD';
 import { ControlsHint } from './ui/ControlsHint';
+import { TrickPopup } from './ui/TrickPopup';
+import { Minimap } from './ui/Minimap';
 import { TutorialSystem } from './systems/TutorialSystem';
 import { MissionSystem } from './systems/MissionSystem';
 
@@ -181,7 +184,9 @@ function App(): JSX.Element {
   const isPlayingScreen =
     currentScreen === 'freePlay' ||
     currentScreen === 'mission' ||
-    currentScreen === 'tutorial';
+    currentScreen === 'tutorial' ||
+    currentScreen === 'neonRace' ||
+    currentScreen === 'freestyle';
 
   // Check WebGL support (after all hooks)
   const webglCheck = checkWebGLSupport();
@@ -198,13 +203,17 @@ function App(): JSX.Element {
           gl={{
             antialias: true,
             powerPreference: 'high-performance',
+            toneMapping: THREE.ACESFilmicToneMapping,
+            toneMappingExposure: 1.0,
           }}
           tabIndex={-1}
           style={{ outline: 'none' }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <Suspense fallback={null}>
-            {currentScreen !== 'mainMenu' && currentScreen !== 'settings' && <GameScene />}
+            {currentScreen !== 'mainMenu' && currentScreen !== 'settings' && (
+              <GameScene />
+            )}
           </Suspense>
         </Canvas>
       </div>
@@ -238,6 +247,14 @@ function App(): JSX.Element {
 
           {/* Controls Hint */}
           {isPlayingScreen && <ControlsHint />}
+
+          {/* Trick Popup (freestyle & neonRace) */}
+          {(currentScreen === 'freestyle' || currentScreen === 'neonRace' || currentScreen === 'freePlay') && (
+            <TrickPopup />
+          )}
+
+          {/* Minimap */}
+          {isPlayingScreen && <Minimap />}
         </Suspense>
       </div>
     </>

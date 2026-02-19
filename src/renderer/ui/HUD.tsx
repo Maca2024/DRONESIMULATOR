@@ -90,6 +90,16 @@ export function HUD(): JSX.Element {
   const speed = Math.sqrt(
     drone.velocity.x ** 2 + drone.velocity.y ** 2 + drone.velocity.z ** 2
   ).toFixed(1);
+  const verticalSpeed = drone.velocity.y.toFixed(1);
+
+  // Compute compass heading from quaternion
+  const q = drone.rotation;
+  const siny = 2 * (q.w * q.z + q.x * q.y);
+  const cosy = 1 - 2 * (q.y * q.y + q.z * q.z);
+  const headingRad = Math.atan2(siny, cosy);
+  const heading = Math.round(((headingRad * 180 / Math.PI) + 360) % 360);
+  const compassLabels: Record<number, string> = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };
+  const nearestDir = compassLabels[Math.round(heading / 45) * 45 % 360] || '';
 
   return (
     <div className={styles.hud}>
@@ -107,6 +117,16 @@ export function HUD(): JSX.Element {
           <div className={styles.infoItem}>
             <span className={styles.label}>MODE</span>
             <span className={styles.value}>{drone.flightMode.toUpperCase()}</span>
+          </div>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>VSI</span>
+            <span className={styles.value} style={{ color: Number(verticalSpeed) > 0.5 ? '#00ff88' : Number(verticalSpeed) < -0.5 ? '#ff4444' : '#ffffff' }}>
+              {Number(verticalSpeed) > 0 ? '+' : ''}{verticalSpeed}
+            </span>
+          </div>
+          <div className={styles.infoItem}>
+            <span className={styles.label}>HDG</span>
+            <span className={styles.value}>{heading}° {nearestDir}</span>
           </div>
         </div>
 

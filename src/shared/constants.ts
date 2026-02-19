@@ -190,3 +190,56 @@ export const UI = {
   MIN_UI_SCALE: 1.0,
   MAX_UI_SCALE: 3.0,
 } as const;
+
+// ============================================================================
+// WEATHER PRESETS
+// ============================================================================
+
+export const WEATHER_PRESETS = {
+  CALM: { windMin: 0, windMax: 2, fogDensity: 0, rainIntensity: 0 },
+  BREEZY: { windMin: 3, windMax: 6, fogDensity: 0, rainIntensity: 0 },
+  WINDY: { windMin: 7, windMax: 12, fogDensity: 0.1, rainIntensity: 0 },
+  STORMY: { windMin: 13, windMax: 20, fogDensity: 0.3, rainIntensity: 0.8 },
+  FOGGY: { windMin: 0, windMax: 3, fogDensity: 0.7, rainIntensity: 0 },
+  RAINY: { windMin: 4, windMax: 8, fogDensity: 0.2, rainIntensity: 0.6 },
+} as const;
+
+// ============================================================================
+// TRICK SCORES
+// ============================================================================
+
+export const TRICK_SCORES: Record<string, { score: number; tier: 'basic' | 'advanced' | 'expert'; name: string }> = {
+  FLIP_FORWARD: { score: 300, tier: 'basic', name: 'Forward Flip' },
+  FLIP_BACKWARD: { score: 300, tier: 'basic', name: 'Backward Flip' },
+  FLIP_LEFT: { score: 300, tier: 'basic', name: 'Left Flip' },
+  FLIP_RIGHT: { score: 300, tier: 'basic', name: 'Right Flip' },
+  ROLL_LEFT: { score: 400, tier: 'advanced', name: 'Left Roll' },
+  ROLL_RIGHT: { score: 400, tier: 'advanced', name: 'Right Roll' },
+  YAW_SPIN_360: { score: 500, tier: 'advanced', name: '360 Spin' },
+  YAW_SPIN_720: { score: 800, tier: 'expert', name: '720 Spin' },
+  POWER_LOOP: { score: 1000, tier: 'expert', name: 'Power Loop' },
+  INVERTED_HANG: { score: 600, tier: 'expert', name: 'Inverted Hang' },
+} as const;
+
+// ============================================================================
+// MAP PRESETS
+// ============================================================================
+
+export const MAP_PRESETS = {
+  GRASSLANDS: { terrain: 'grass' as const, heightScale: 3, hasWater: true, waterLevel: -0.5 },
+  MOUNTAINS: { terrain: 'snow' as const, heightScale: 8, hasWater: false, waterLevel: 0 },
+  CANYON: { terrain: 'desert' as const, heightScale: 6, hasWater: false, waterLevel: 0 },
+  ISLAND: { terrain: 'grass' as const, heightScale: 4, hasWater: true, waterLevel: 0.5 },
+  CITY: { terrain: 'urban' as const, heightScale: 1, hasWater: false, waterLevel: 0 },
+} as const;
+
+// ============================================================================
+// RACE CONSTANTS
+// ============================================================================
+
+export const RACE = {
+  GHOST_RECORD_INTERVAL: 3, // record every 3rd frame
+  COUNTDOWN_SECONDS: 3,
+  CHECKPOINT_RADIUS: 3,
+  NEON_GATE_COLORS: ['#00ffff', '#ff00ff', '#ffff00', '#00ff88'] as readonly string[],
+} as const;

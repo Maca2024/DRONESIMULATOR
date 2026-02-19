@@ -5,6 +5,8 @@ import type {
   Mission,
   FlightMode,
   Vector3,
+  RaceState,
+  TrickPopupData,
 } from '@shared/types';
 
 interface GameState {
@@ -26,10 +28,18 @@ interface GameState {
   score: number;
   comboMultiplier: number;
 
+  // Race state
+  raceState: RaceState | null;
+
+  // Trick popup
+  trickPopup: TrickPopupData | null;
+
   // Actions
   setScreen: (screen: GameScreen) => void;
   goBack: () => void;
-  startGame: (mode: 'freePlay' | 'mission' | 'tutorial', mission?: Mission) => void;
+  startGame: (mode: 'freePlay' | 'mission' | 'tutorial' | 'neonRace' | 'freestyle', mission?: Mission) => void;
+  setRaceState: (state: RaceState | null) => void;
+  showTrickPopup: (popup: TrickPopupData) => void;
   pauseGame: () => void;
   resumeGame: () => void;
   endGame: () => void;
@@ -66,6 +76,8 @@ export const useGameStore = create<GameState>((set) => ({
   missionTime: 0,
   score: 0,
   comboMultiplier: 1,
+  raceState: null,
+  trickPopup: null,
 
   // Screen navigation
   setScreen: (screen) =>
@@ -81,9 +93,16 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
   // Game flow
-  startGame: (mode, mission) =>
+  startGame: (mode, mission) => {
+    const screenMap: Record<string, GameScreen> = {
+      freePlay: 'freePlay',
+      tutorial: 'tutorial',
+      mission: 'mission',
+      neonRace: 'neonRace',
+      freestyle: 'freestyle',
+    };
     set({
-      currentScreen: mode === 'freePlay' ? 'freePlay' : mode === 'tutorial' ? 'tutorial' : 'mission',
+      currentScreen: screenMap[mode] || 'freePlay',
       isPlaying: true,
       isPaused: false,
       gameTime: 0,
@@ -91,8 +110,11 @@ export const useGameStore = create<GameState>((set) => ({
       score: 0,
       comboMultiplier: 1,
       currentMission: mission || null,
-      drone: { ...initialDroneState, isArmed: true }, // Auto-arm drone on start
-    }),
+      raceState: null,
+      trickPopup: null,
+      drone: { ...initialDroneState, isArmed: true },
+    });
+  },
 
   pauseGame: () =>
     set((state) => ({
@@ -102,10 +124,15 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
   resumeGame: () =>
-    set((state) => ({
-      isPaused: false,
-      currentScreen: state.previousScreen === 'tutorial' ? 'tutorial' : state.currentMission ? 'mission' : 'freePlay',
-    })),
+    set((state) => {
+      const prev = state.previousScreen;
+      let screen: GameScreen = 'freePlay';
+      if (prev === 'tutorial') screen = 'tutorial';
+      else if (prev === 'neonRace') screen = 'neonRace';
+      else if (prev === 'freestyle') screen = 'freestyle';
+      else if (state.currentMission) screen = 'mission';
+      return { isPaused: false, currentScreen: screen };
+    }),
 
   endGame: () =>
     set({
@@ -147,6 +174,10 @@ export const useGameStore = create<GameState>((set) => ({
     set({
       comboMultiplier: 1,
     }),
+
+  setRaceState: (raceState) => set({ raceState }),
+
+  showTrickPopup: (popup) => set({ trickPopup: popup }),
 
   crash: (_position) =>
     set((state) => ({

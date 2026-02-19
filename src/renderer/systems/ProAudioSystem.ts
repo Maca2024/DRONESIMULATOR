@@ -122,6 +122,9 @@ export class ProAudioSystem {
   private lastState: DroneAudioState | null = null;
   private audioResumed = false;
 
+  // Game intensity (0-1) for reactive music
+  private gameIntensity = 0;
+
   private config: ProAudioConfig = {
     masterVolume: 0.7,
     motorVolume: 0.8,
@@ -1055,7 +1058,12 @@ export class ProAudioSystem {
 
       osc.start();
       osc.stop(now + 1);
-    }, 600 + Math.random() * 400); // Random timing for organic feel
+    }, this.getArpeggioInterval()); // Tempo based on game intensity
+  }
+
+  private getArpeggioInterval(): number {
+    // 800ms calm -> 300ms intense
+    return 800 - this.gameIntensity * 500 + Math.random() * (200 - this.gameIntensity * 150);
   }
 
   /**
@@ -1088,6 +1096,38 @@ export class ProAudioSystem {
       }
       this.musicOscillators = [];
     }, 1000);
+  }
+
+  /**
+   * Set game intensity for reactive music (0-1)
+   * Controls: arpeggio speed, pad volume, note density
+   */
+  setGameIntensity(intensity: number): void {
+    this.gameIntensity = Math.max(0, Math.min(1, intensity));
+
+    // Adjust music arpeggio speed based on intensity
+    if (this.musicPlaying && this.musicInterval) {
+      clearInterval(this.musicInterval);
+      this.startMusicArpeggio();
+    }
+
+    // Adjust pad volume (inverse of intensity - calmer when intense)
+    // Pad is quieter during intense gameplay to let motor sounds dominate
+  }
+
+  /**
+   * Set wind sound override from weather system
+   */
+  setWindOverride(windSpeed: number): void {
+    if (!this.isInitialized || !this.context || !this.windGain || !this.windFilter) return;
+
+    const currentTime = this.context.currentTime;
+    const normalizedWind = Math.min(windSpeed / 20, 1);
+    const volume = normalizedWind * this.config.windVolume * 0.3;
+    this.windGain.gain.setTargetAtTime(volume, currentTime, 0.3);
+
+    const freq = 150 + normalizedWind * 600;
+    this.windFilter.frequency.setTargetAtTime(freq, currentTime, 0.3);
   }
 
   /**

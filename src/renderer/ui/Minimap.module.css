@@ -1,0 +1,12 @@
+.container {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.canvas {
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(0, 255, 170, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.5);
+}

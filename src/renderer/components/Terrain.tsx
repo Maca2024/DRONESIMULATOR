@@ -9,29 +9,67 @@ interface TerrainProps {
   type?: 'grass' | 'desert' | 'snow' | 'urban';
 }
 
-// Generate procedural height map
+// Value noise with smoothstep interpolation
+const hash = (x: number, z: number): number => {
+  let h = (x * 374761393 + z * 668265263) | 0;
+  h = ((h ^ (h >> 13)) * 1274126177) | 0;
+  return (h & 0x7fffffff) / 0x7fffffff; // 0 to 1
+};
+
+const smoothstep = (t: number): number => t * t * (3 - 2 * t);
+
+const valueNoise = (x: number, z: number): number => {
+  const ix = Math.floor(x);
+  const iz = Math.floor(z);
+  const fx = smoothstep(x - ix);
+  const fz = smoothstep(z - iz);
+
+  const a = hash(ix, iz);
+  const b = hash(ix + 1, iz);
+  const c = hash(ix, iz + 1);
+  const d = hash(ix + 1, iz + 1);
+
+  return a + (b - a) * fx + (c - a) * fz + (a - b - c + d) * fx * fz;
+};
+
+// Fractal Brownian Motion - 5 octaves for natural terrain
+const fbm = (x: number, z: number, octaves = 5): number => {
+  let value = 0;
+  let amplitude = 0.5;
+  let frequency = 1;
+  let maxValue = 0;
+
+  for (let i = 0; i < octaves; i++) {
+    value += valueNoise(x * frequency, z * frequency) * amplitude;
+    maxValue += amplitude;
+    amplitude *= 0.5;
+    frequency *= 2.1;
+  }
+
+  return value / maxValue; // Normalize to 0-1
+};
+
+// Generate procedural height map with FBM value noise
 const generateHeightMap = (resolution: number, scale: number): Float32Array => {
   const heights = new Float32Array((resolution + 1) * (resolution + 1));
 
-  // Simple multi-octave noise
-  const noise = (x: number, z: number, freq: number): number => {
-    return Math.sin(x * freq) * Math.cos(z * freq) * 0.5 +
-           Math.sin(x * freq * 2.3 + 1.5) * Math.cos(z * freq * 2.1) * 0.25 +
-           Math.sin(x * freq * 4.7 + 3.2) * Math.cos(z * freq * 4.9 + 1.1) * 0.125;
-  };
-
   for (let z = 0; z <= resolution; z++) {
     for (let x = 0; x <= resolution; x++) {
-      const nx = x / resolution - 0.5;
-      const nz = z / resolution - 0.5;
+      const nx = (x / resolution - 0.5) * 10;
+      const nz = (z / resolution - 0.5) * 10;
 
-      // Multi-frequency noise
-      let height = noise(nx, nz, 3) * scale;
-      height += noise(nx, nz, 7) * scale * 0.5;
-      height += noise(nx, nz, 15) * scale * 0.25;
+      // FBM noise centered around 0
+      let height = (fbm(nx, nz, 5) - 0.5) * 2 * scale;
+
+      // Add ridge features using abs of noise
+      const ridge = Math.abs(fbm(nx * 1.5 + 7.3, nz * 1.5 + 2.8, 3) - 0.5) * scale * 0.5;
+      height += ridge;
 
       // Flatten center area (landing zone)
-      const distFromCenter = Math.sqrt(nx * nx + nz * nz);
+      const distFromCenter = Math.sqrt(
+        ((x / resolution - 0.5) * (x / resolution - 0.5)) +
+        ((z / resolution - 0.5) * (z / resolution - 0.5))
+      );
       if (distFromCenter < 0.1) {
         height *= distFromCenter / 0.1;
       }

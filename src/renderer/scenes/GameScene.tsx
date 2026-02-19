@@ -1,8 +1,7 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Grid } from '@react-three/drei';
 import * as THREE from 'three';
-// Drone model is now in DroneModel component
 import { useGameStore } from '../store/gameStore';
 import { useInputStore } from '../store/inputStore';
 import { useGameManager } from '../hooks/useGameManager';
@@ -12,6 +11,17 @@ import { Environment } from '../components/Environment';
 import { DroneModel } from '../components/DroneModel';
 import { ParticleEffects } from '../components/ParticleEffects';
 import { Terrain } from '../components/Terrain';
+import { Water } from '../components/Water';
+import { RainEffect } from '../components/RainEffect';
+import { WindParticles } from '../components/WindParticles';
+import { SpeedLines } from '../components/SpeedLines';
+import { NeonGate } from '../components/NeonGate';
+import { NeonGrid } from '../components/NeonGrid';
+import { DroneTrail } from '../components/DroneTrail';
+import { GhostDrone } from '../components/GhostDrone';
+import { Minimap } from '../ui/Minimap';
+import { RaceSystem } from '../systems/RaceSystem';
+import { RACE } from '@shared/constants';
 import type { MissionObjective } from '@shared/types';
 
 export function GameScene(): JSX.Element {
@@ -24,11 +34,12 @@ export function GameScene(): JSX.Element {
   const currentScreen = useGameStore((state) => state.currentScreen);
   const tick = useGameStore((state) => state.tick);
   const droneState = useGameStore((state) => state.drone);
+  const raceState = useGameStore((state) => state.raceState);
   const updateInput = useInputStore((state) => state.update);
 
   // Game manager with all systems
   const gameManager = useGameManager();
-  const { tutorial, mission, update, initAudio } = gameManager;
+  const { tutorial, mission, update, initAudio, getWeatherState } = gameManager;
 
   // Local state for 3D scene rendering
   const [tutorialTask, setTutorialTask] = useState(tutorial.getCurrentTask());
@@ -39,14 +50,24 @@ export function GameScene(): JSX.Element {
   const [dronePosition, setDronePosition] = useState(new THREE.Vector3(0, 0, 0));
   const [droneVelocity, setDroneVelocity] = useState(new THREE.Vector3(0, 0, 0));
   const [motorRPM, setMotorRPM] = useState<[number, number, number, number]>([0, 0, 0, 0]);
-  const [timeOfDay] = useState<'dawn' | 'day' | 'dusk' | 'night'>('day');
-  const [weather] = useState<'clear' | 'cloudy' | 'foggy'>('clear');
+  const [droneSpeed, setDroneSpeed] = useState(0);
   const [terrainType] = useState<'grass' | 'desert' | 'snow' | 'urban'>('grass');
 
-  // Enable shadows
+  // Weather state (updated each frame)
+  const [weatherState, setWeatherState] = useState(getWeatherState());
+
+  // Neon race gate data
+  const defaultCourse = useMemo(() => RaceSystem.getDefaultCourse(), []);
+  const neonGateColors = RACE.NEON_GATE_COLORS;
+
+  // Update fog based on weather
   useEffect(() => {
-    scene.fog = weather === 'foggy' ? new THREE.Fog(0xcccccc, 10, 150) : null;
-  }, [scene, weather]);
+    if (weatherState.fogDensity > 0.01) {
+      scene.fog = new THREE.Fog(0xaaaacc, 10, 150 / weatherState.fogDensity);
+    } else {
+      scene.fog = null;
+    }
+  }, [scene, weatherState.fogDensity]);
 
   // Initialize input handlers when game scene mounts
   const initializeInput = useInputStore((state) => state.initialize);
@@ -102,18 +123,24 @@ export function GameScene(): JSX.Element {
       cameraController.update(physicsState.position, euler, dt);
 
       // Update state for effects
-      setDronePosition(new THREE.Vector3(
+      const pos = new THREE.Vector3(
         physicsState.position.x,
         physicsState.position.y,
         physicsState.position.z
-      ));
-      setDroneVelocity(new THREE.Vector3(
+      );
+      const vel = new THREE.Vector3(
         physicsState.velocity.x,
         physicsState.velocity.y,
         physicsState.velocity.z
-      ));
+      );
+      setDronePosition(pos);
+      setDroneVelocity(vel);
       setMotorRPM(physicsState.motorRPM);
+      setDroneSpeed(vel.length());
     }
+
+    // Update weather state for rendering
+    setWeatherState(getWeatherState());
 
     // Update 3D scene state for markers
     if (currentScreen === 'tutorial') {
@@ -131,31 +158,70 @@ export function GameScene(): JSX.Element {
   // Get mission objectives for rendering gates
   const missionObjectives = missionState?.mission.objectives || [];
 
+  // Is neon race mode
+  const isNeonRace = currentScreen === 'neonRace';
+  const isFreestyle = currentScreen === 'freestyle';
+  const showTrail = isNeonRace || isFreestyle;
+
   return (
     <>
-      {/* Post-processing effects */}
-      <PostProcessingEffects enabled={true} quality="medium" />
+      {/* Post-processing effects with dynamic speed */}
+      <PostProcessingEffects enabled={true} quality="medium" droneSpeed={droneSpeed / 40} />
 
-      {/* Environment (sky, clouds, lighting) */}
-      <Environment timeOfDay={timeOfDay} weather={weather} />
+      {/* Environment (sky, clouds, lighting) with continuous time */}
+      <Environment
+        timeOfDay="day"
+        weather={weatherState.fogDensity > 0.3 ? 'foggy' : 'clear'}
+        continuousTime={weatherState.timeOfDay}
+      />
 
       {/* Terrain with procedural details */}
       <Terrain size={200} resolution={64} heightScale={2} type={terrainType} />
 
-      {/* Grid overlay */}
-      <Grid
-        position={[0, 0.02, 0]}
-        args={[100, 100]}
-        cellSize={1}
-        cellThickness={0.5}
-        cellColor="#3d6b4a"
-        sectionSize={10}
-        sectionThickness={1}
-        sectionColor="#2d5a3a"
-        fadeDistance={100}
-        fadeStrength={1}
-        followCamera={false}
+      {/* Water surface */}
+      <Water size={200} waterLevel={-0.5} />
+
+      {/* Grid overlay (hide in neon race - use NeonGrid instead) */}
+      {!isNeonRace && (
+        <Grid
+          position={[0, 0.02, 0]}
+          args={[100, 100]}
+          cellSize={1}
+          cellThickness={0.5}
+          cellColor="#3d6b4a"
+          sectionSize={10}
+          sectionThickness={1}
+          sectionColor="#2d5a3a"
+          fadeDistance={100}
+          fadeStrength={1}
+          followCamera={false}
+        />
+      )}
+
+      {/* Neon grid for race mode */}
+      {isNeonRace && (
+        <NeonGrid
+          size={200}
+          dronePosition={{ x: dronePosition.x, z: dronePosition.z }}
+        />
+      )}
+
+      {/* Weather effects */}
+      {weatherState.rainIntensity > 0 && (
+        <RainEffect
+          intensity={weatherState.rainIntensity}
+          windDirection={weatherState.wind.direction}
+          dronePosition={dronePosition}
+        />
+      )}
+      <WindParticles
+        windDirection={weatherState.wind.direction}
+        windSpeed={weatherState.wind.baseSpeed + weatherState.wind.gustSpeed}
+        dronePosition={dronePosition}
       />
+
+      {/* Speed lines at high speed */}
+      <SpeedLines speed={droneSpeed} threshold={15} />
 
       {/* Particle effects */}
       <ParticleEffects
@@ -171,8 +237,54 @@ export function GameScene(): JSX.Element {
         <DroneModel motorRPM={motorRPM} armed={droneState.isArmed} />
       </group>
 
-      {/* Legacy drone for fallback */}
-      {/* <Drone ref={droneRef} /> */}
+      {/* Drone trail for freestyle/race */}
+      {showTrail && <DroneTrail droneRef={droneRef} color={isNeonRace ? '#00ffff' : '#ff66ff'} />}
+
+      {/* Neon race gates */}
+      {isNeonRace && defaultCourse.checkpoints.map((cp, i) => (
+        <NeonGate
+          key={i}
+          position={[cp.position.x, cp.position.y, cp.position.z]}
+          color={neonGateColors[i % neonGateColors.length]}
+          index={i}
+          passed={raceState ? i < raceState.currentCheckpoint : false}
+        />
+      ))}
+
+      {/* Ghost drone in race mode */}
+      {isNeonRace && raceState && raceState.ghostData.length > 0 && (
+        <GhostDrone
+          getFrame={(time) => {
+            if (raceState.ghostData.length === 0 || raceState.bestLapTime === Infinity) return null;
+            const loopedTime = time % raceState.bestLapTime;
+            const ghostData = raceState.ghostData;
+            let low = 0;
+            let high = ghostData.length - 1;
+            while (low < high - 1) {
+              const mid = Math.floor((low + high) / 2);
+              if (ghostData[mid].timestamp <= loopedTime) low = mid;
+              else high = mid;
+            }
+            const a = ghostData[low];
+            const b = ghostData[Math.min(high, ghostData.length - 1)];
+            const range = b.timestamp - a.timestamp;
+            const t = range > 0 ? (loopedTime - a.timestamp) / range : 0;
+            return {
+              timestamp: loopedTime,
+              position: {
+                x: a.position.x + (b.position.x - a.position.x) * t,
+                y: a.position.y + (b.position.y - a.position.y) * t,
+                z: a.position.z + (b.position.z - a.position.z) * t,
+              },
+              rotation: {
+                roll: a.rotation.roll + (b.rotation.roll - a.rotation.roll) * t,
+                pitch: a.rotation.pitch + (b.rotation.pitch - a.rotation.pitch) * t,
+                yaw: a.rotation.yaw + (b.rotation.yaw - a.rotation.yaw) * t,
+              },
+            };
+          }}
+        />
+      )}
 
       {/* Training gates for free play */}
       {currentScreen === 'freePlay' && (
@@ -202,9 +314,14 @@ export function GameScene(): JSX.Element {
       {currentScreen === 'tutorial' && tutorialTask?.targetAltitude && (
         <AltitudeRing altitude={tutorialTask.targetAltitude} />
       )}
+
+      {/* Minimap (HTML overlay rendered outside Canvas via portal) */}
     </>
   );
 }
+
+// Minimap is an HTML component - export for use in App.tsx
+export { Minimap };
 
 interface TrainingGateProps {
   position: [number, number, number];

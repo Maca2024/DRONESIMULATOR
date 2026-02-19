@@ -88,7 +88,98 @@ export interface DroneState {
 // GAME TYPES
 // ============================================================================
 
-export type GameScreen = 'mainMenu' | 'settings' | 'tutorial' | 'freePlay' | 'mission' | 'pause';
+export type GameScreen = 'mainMenu' | 'settings' | 'tutorial' | 'freePlay' | 'mission' | 'pause' | 'neonRace' | 'freestyle';
+
+// ============================================================================
+// WEATHER TYPES
+// ============================================================================
+
+export type WeatherPreset = 'clear' | 'windy' | 'stormy' | 'foggy' | 'rain';
+
+export interface WindState {
+  direction: Vector3; // normalized direction
+  baseSpeed: number; // m/s
+  gustSpeed: number; // current gust addition m/s
+  gustFrequency: number; // Hz
+}
+
+export interface WeatherState {
+  preset: WeatherPreset;
+  wind: WindState;
+  fogDensity: number; // 0-1
+  rainIntensity: number; // 0-1
+  timeOfDay: number; // 0-24 continuous
+}
+
+// ============================================================================
+// TRICK TYPES
+// ============================================================================
+
+export type TrickType =
+  | 'FLIP_FORWARD'
+  | 'FLIP_BACKWARD'
+  | 'FLIP_LEFT'
+  | 'FLIP_RIGHT'
+  | 'ROLL_LEFT'
+  | 'ROLL_RIGHT'
+  | 'YAW_SPIN_360'
+  | 'YAW_SPIN_720'
+  | 'POWER_LOOP'
+  | 'INVERTED_HANG';
+
+export type TrickTier = 'basic' | 'advanced' | 'expert';
+
+export interface TrickEvent {
+  type: TrickType;
+  tier: TrickTier;
+  score: number;
+  combo: number;
+  multiplier: number;
+  timestamp: number;
+}
+
+export interface TrickPopupData {
+  name: string;
+  score: number;
+  combo: number;
+  multiplier: number;
+  tier: TrickTier;
+  id: number;
+}
+
+// ============================================================================
+// RACE TYPES
+// ============================================================================
+
+export interface GhostFrame {
+  timestamp: number;
+  position: Vector3;
+  rotation: { roll: number; pitch: number; yaw: number };
+}
+
+export interface RaceCheckpoint {
+  position: Vector3;
+  radius: number;
+  passed: boolean;
+}
+
+export interface RaceConfig {
+  checkpoints: RaceCheckpoint[];
+  laps: number;
+  name: string;
+}
+
+export interface RaceState {
+  isActive: boolean;
+  currentCheckpoint: number;
+  currentLap: number;
+  lapTime: number;
+  totalTime: number;
+  splitTimes: number[];
+  bestLapTime: number;
+  ghostData: GhostFrame[];
+  isRecording: boolean;
+}
 
 export type MissionType =
   | 'timeTrial'
@@ -251,4 +342,7 @@ export type GameEvent =
   | { type: 'CRASH'; position: Vector3; velocity: number }
   | { type: 'ARM_STATE_CHANGED'; armed: boolean }
   | { type: 'FLIGHT_MODE_CHANGED'; mode: FlightMode }
-  | { type: 'TRICK_PERFORMED'; trick: string; score: number };
+  | { type: 'TRICK_PERFORMED'; trick: TrickType; score: number; combo: number }
+  | { type: 'RACE_CHECKPOINT'; checkpoint: number; time: number }
+  | { type: 'RACE_LAP_COMPLETE'; lap: number; lapTime: number }
+  | { type: 'RACE_COMPLETE'; totalTime: number; bestLap: number };

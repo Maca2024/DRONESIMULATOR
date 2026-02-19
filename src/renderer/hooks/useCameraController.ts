@@ -11,6 +11,7 @@
 import { useRef, useCallback, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useSettingsStore } from '../store/settingsStore';
 
 export type CameraMode = 'chase' | 'fpv' | 'orbit' | 'cinematic';
 
@@ -66,6 +67,7 @@ export interface CameraController {
   mode: CameraMode;
   setMode: (mode: CameraMode) => void;
   cycleMode: () => void;
+  triggerShake: (intensity?: number) => void;
   update: (
     dronePosition: { x: number; y: number; z: number },
     droneRotation: { roll: number; pitch: number; yaw: number },
@@ -82,6 +84,8 @@ export function useCameraController(
   const targetPosition = useRef(new THREE.Vector3());
   const currentPosition = useRef(new THREE.Vector3());
   const orbitAngle = useRef(0);
+  const shakeIntensity = useRef(0);
+  const disableScreenShake = useSettingsStore((state) => state.settings.accessibility.disableScreenShake);
   const fullConfig = { ...DEFAULT_CONFIG, ...config };
 
   // Mode cycling order
@@ -97,6 +101,12 @@ export function useCameraController(
     const nextIndex = (currentIndex + 1) % MODES.length;
     setMode(MODES[nextIndex]);
   }, [setMode]);
+
+  const triggerShake = useCallback((intensity = 1.0) => {
+    if (!disableScreenShake) {
+      shakeIntensity.current = intensity;
+    }
+  }, [disableScreenShake]);
 
   // Listen for camera mode key
   useEffect(() => {
@@ -189,6 +199,15 @@ export function useCameraController(
           break;
         }
       }
+
+      // Apply camera shake
+      if (shakeIntensity.current > 0.01) {
+        const shake = shakeIntensity.current * 0.5;
+        camera.position.x += (Math.random() - 0.5) * shake;
+        camera.position.y += (Math.random() - 0.5) * shake;
+        camera.position.z += (Math.random() - 0.5) * shake;
+        shakeIntensity.current *= 0.92; // Decay
+      }
     },
     [camera, fullConfig]
   );
@@ -197,6 +216,7 @@ export function useCameraController(
     mode: modeRef.current,
     setMode,
     cycleMode,
+    triggerShake,
     update,
   };
 }

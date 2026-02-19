@@ -44,6 +44,16 @@ export function MainMenu(): JSX.Element {
     startGame('mission', mission);
   };
 
+  const handleNeonRace = (): void => {
+    initAudioOnce();
+    startGame('neonRace');
+  };
+
+  const handleFreestyle = (): void => {
+    initAudioOnce();
+    startGame('freestyle');
+  };
+
   const handleSettings = (): void => {
     setScreen('settings');
   };
@@ -78,6 +88,18 @@ export function MainMenu(): JSX.Element {
             <button className={styles.menuButton} onClick={() => setActiveSubmenu('tutorial')}>
               <span className={styles.buttonIcon}>📚</span>
               <span className={styles.buttonText}>Tutorial</span>
+            </button>
+
+            <button className={styles.menuButton} onClick={handleNeonRace}>
+              <span className={styles.buttonIcon}>🌈</span>
+              <span className={styles.buttonText}>Neon Race</span>
+              <span className={styles.buttonHint}>Glowing gates, ghost replay!</span>
+            </button>
+
+            <button className={styles.menuButton} onClick={handleFreestyle}>
+              <span className={styles.buttonIcon}>🔄</span>
+              <span className={styles.buttonText}>Freestyle</span>
+              <span className={styles.buttonHint}>Tricks, combos, high scores!</span>
             </button>
 
             <button className={styles.menuButton} onClick={() => setActiveSubmenu('missions')}>
